@@ -1,0 +1,50 @@
+{
+  "title": "Advanced Rails Techniques",
+  "description": "Deep dive into advanced Ruby on Rails patterns and best practices",
+  "target_audience": "Experienced Rails developers",
+  "duration_minutes": 45,
+  "slides": [
+    {
+      "title": "Service Objects",
+      "content": [
+        "When to use",
+        "Implementation patterns",
+        "Testing strategies"
+      ],
+      "notes": "Speaker notes for Service Objects",
+      "number": 1
+    },
+    {
+      "title": "Background Jobs",
+      "content": [
+        "Sidekiq basics",
+        "Job patterns",
+        "Error handling"
+      ],
+      "notes": "Speaker notes for Background Jobs",
+      "number": 2
+    },
+    {
+      "title": "API Design",
+      "content": [
+        "RESTful patterns",
+        "Serialization",
+        "Authentication"
+      ],
+      "notes": "Speaker notes for API Design",
+      "number": 3
+    },
+    {
+      "title": "Performance",
+      "content": [
+        "Database optimization",
+        "Caching strategies",
+        "Monitoring"
+      ],
+      "notes": "Speaker notes for Performance",
+      "number": 4
+    }
+  ],
+  "estimated_duration": 10,
+  "completion_status": "4/4 slides completed"
+}

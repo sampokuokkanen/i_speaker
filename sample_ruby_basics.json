@@ -1,0 +1,40 @@
+{
+  "title": "Ruby Basics for Beginners",
+  "description": "An introduction to Ruby programming language fundamentals",
+  "target_audience": "Programming beginners",
+  "duration_minutes": 20,
+  "slides": [
+    {
+      "title": "Welcome to Ruby",
+      "content": [
+        "What is Ruby?",
+        "Why learn Ruby?",
+        "Ruby's philosophy"
+      ],
+      "notes": "Speaker notes for Welcome to Ruby",
+      "number": 1
+    },
+    {
+      "title": "Basic Syntax",
+      "content": [
+        "Variables",
+        "Methods",
+        "Classes"
+      ],
+      "notes": "Speaker notes for Basic Syntax",
+      "number": 2
+    },
+    {
+      "title": "Ruby Features",
+      "content": [
+        "Dynamic typing",
+        "Object-oriented",
+        "Expressive syntax"
+      ],
+      "notes": "Speaker notes for Ruby Features",
+      "number": 3
+    }
+  ],
+  "estimated_duration": 8,
+  "completion_status": "3/3 slides completed"
+}

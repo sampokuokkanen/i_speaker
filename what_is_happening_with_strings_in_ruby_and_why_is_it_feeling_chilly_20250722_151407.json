@@ -1,0 +1,256 @@
+{
+  "title": "What is happening with strings in Ruby and why is it feeling chilly? 🥶",
+  "description": "What is happening with strings in Ruby and why is it feeling chilly? Explore the recent changes to frozen string literals, their implications, and what this means for everyday Rubyists.",
+  "target_audience": "RubyConf Taiwan attendants",
+  "duration_minutes": 30,
+  "slides": [
+    {
+      "title": "The State of Strings in Ruby",
+      "content": [
+        "Introduction to frozen string literals",
+        "Current implementation in ruby 3.4"
+      ],
+      "notes": "Welcome everyone! Today we'll be discussing the recent changes to frozen string literals in Ruby. We'll explore what's happening with strings in the Ruby source code, how it affects everyday Rubyists, and why this change is important.",
+      "number": 1
+    },
+    {
+      "title": "The State of Strings in Ruby (Part 2)",
+      "content": [
+        "In Ruby 3.0, a change was made to how strings are handled"
+      ],
+      "notes": "We'll explore this change and its implications",
+      "number": 2
+    },
+    {
+      "title": "The State of Strings in Ruby (Part 2)",
+      "content": [
+        "previous slide content"
+      ],
+      "notes": "transition to the next slide: 'And now, let's dig into the past...'",
+      "number": 3
+    },
+    {
+      "title": "Ruby Archaeology: The Origins of Frozen Strings",
+      "content": [
+        "A joke from Taiwan: Why did the Taiwanese programmer quit his job? Because he didn't get arrays!",
+        "But in all seriousness, have you ever wondered where Ruby's string literals came from?",
+        "Let's take a trip down memory lane and explore the origins of frozen strings in Ruby."
+      ],
+      "notes": "briefly mention the recent changes to frozen string literals and their implications",
+      "number": 4
+    },
+    {
+      "title": "Ruby Archaeology: The Origins of Frozen Strings",
+      "content": [
+        "History of immutable strings",
+        "How did we get frozen strings?",
+        "Why did Matz decide on frozen strings in Ruby 3?"
+      ],
+      "notes": "So, how did we even get frozen strings in the first place? Let's take a trip down memory lane and explore the history of immutable strings in Ruby. We'll also discuss why Matz decided to make this change in Ruby 3.",
+      "number": 5
+    },
+    {
+      "title": "Ruby's String Class History (Deeper Dive)",
+      "content": [
+        "The String class has undergone significant changes throughout Ruby's history"
+      ],
+      "notes": "From the early days of MRI to JRuby and beyond",
+      "number": 6
+    },
+    {
+      "title": "What Are Chilled Strings?",
+      "content": [
+        "Definition of chilled strings",
+        "How do chilled strings work?",
+        "Benefits of chilled strings"
+      ],
+      "notes": "So, what exactly are 'chilled' strings? Let's break it down. We'll discuss the definition, how they work, and what benefits they offer.",
+      "number": 7
+    },
+    {
+      "title": "What Are Chilled Strings? (Example)",
+      "content": [
+        "Chilled strings are used for string constants that don't change"
+      ],
+      "notes": "We'll explore how this change affects our code",
+      "number": 8
+    },
+    {
+      "title": "Impact on Everyday Rubyists: Performance Considerations",
+      "content": [
+        "With chilled strings, performance is improved for constant strings"
+      ],
+      "notes": "But there are other implications to consider",
+      "number": 9
+    },
+    {
+      "title": "The Decision-Making Process (Behind the Scenes)",
+      "content": [
+        "How did the decision to use frozen string literals come about?"
+      ],
+      "notes": "We'll examine the reasoning behind this change",
+      "number": 10
+    },
+    {
+      "title": "Impact on Everyday Rubyists",
+      "content": [
+        "How will chilled strings affect our code?",
+        "Changes to our workflows?",
+        "Potential pitfalls"
+      ],
+      "notes": "Now that we understand what 'chilled' strings are, let's talk about how they'll impact our everyday work. We'll explore the changes to our workflows and potential pitfalls.",
+      "number": 11
+    },
+    {
+      "title": "Real-World Impact: A Case Study",
+      "content": [
+        "Let's look at an example of how chilled strings improved performance in a real-world application"
+      ],
+      "notes": "This demonstrates the practical applications of this change",
+      "number": 12
+    },
+    {
+      "title": "The Decision-Making Process",
+      "content": [
+        "Why did Ruby 3 decide on frozen string literals?",
+        "How did the decision-making process work?",
+        "What were some of the key considerations?"
+      ],
+      "notes": "So, how did the decision to make frozen strings a default in Ruby 3 come about? Let's take a look at the decision-making process and what factors influenced this change.",
+      "number": 13
+    },
+    {
+      "title": "Best Practices for Using Frozen String Literals",
+      "content": [
+        "How can you use frozen string literals effectively in your code?"
+      ],
+      "notes": "We'll provide guidelines for best practices",
+      "number": 14
+    },
+    {
+      "title": "The Future of Frozen String Literals",
+      "content": [
+        "What does the future hold for frozen string literals?",
+        "When can we expect to see frozen string literals by default?",
+        "What role will gems play in this transition?"
+      ],
+      "notes": "Finally, let's talk about what the future holds for frozen string literals. We'll discuss when we can expect to see them by default and what role gems will play in this transition.",
+      "number": 15
+    },
+    {
+      "title": "Interactive Break 1: Poll - Do You Use Frozen String Literals?",
+      "content": [
+        "Take a quick poll to see how many of you are already using chilled strings"
+      ],
+      "notes": "",
+      "number": 16
+    },
+    {
+      "title": "Conclusion",
+      "content": [
+        "Recap of key points",
+        "Takeaways from the presentation"
+      ],
+      "notes": "That's all for today! Let's recap some of the key points we covered and take away something new. Thanks for joining me on this journey into the world of frozen string literals!",
+      "number": 17
+    },
+    {
+      "title": "The Future of Frozen String Literals (Specs)",
+      "content": [
+        "What does the future hold for frozen string literals in Ruby?"
+      ],
+      "notes": "We'll examine the proposal and its implications",
+      "number": 18
+    },
+    {
+      "title": "The Impact on Symbol Strings",
+      "content": [
+        "How will this change affect symbol strings?"
+      ],
+      "notes": "We'll explore the impact on symbols",
+      "number": 19
+    },
+    {
+      "title": "Real-World Impact: Another Case Study",
+      "content": [
+        "Let's look at an example of how chilled strings improved performance in another real-world application"
+      ],
+      "notes": "This demonstrates the practical applications of this change",
+      "number": 20
+    },
+    {
+      "title": "Interactive Break 2: Q&A Session",
+      "content": [
+        "Take a few minutes to ask questions and clarify any doubts you may have"
+      ],
+      "notes": "",
+      "number": 21
+    },
+    {
+      "title": "Best Practices for Testing with Frozen String Literals",
+      "content": [
+        "How can you test your code effectively with frozen string literals?"
+      ],
+      "notes": "We'll provide guidelines for best practices",
+      "number": 22
+    },
+    {
+      "title": "Transition Slide: We're Halfway There!",
+      "content": [
+        "Let's take a quick look back at what we've covered so far"
+      ],
+      "notes": "A brief recap of the key points",
+      "number": 23
+    },
+    {
+      "title": "The Impact on Code Quality and Readability",
+      "content": [
+        "How will this change affect code quality and readability?"
+      ],
+      "notes": "We'll explore the impact on code quality",
+      "number": 24
+    },
+    {
+      "title": "Real-World Impact: A Final Example",
+      "content": [
+        "Let's look at an example of how chilled strings improved performance in a final real-world application"
+      ],
+      "notes": "This demonstrates the practical applications of this change",
+      "number": 25
+    },
+    {
+      "title": "Interactive Break 3: Exercise - Try It Out!",
+      "content": [
+        "Take a few minutes to try out chilled strings in your own code and see the improvements for yourself"
+      ],
+      "notes": "",
+      "number": 26
+    },
+    {
+      "title": "Conclusion (Part 1): Recap and Reflection",
+      "content": [
+        "Let's summarize what we've covered so far and reflect on the implications of this change"
+      ],
+      "notes": "A final recap of the key points",
+      "number": 27
+    },
+    {
+      "title": "Conclusion (Part 2): The Future of Ruby Strings",
+      "content": [
+        "What does the future hold for strings in Ruby?"
+      ],
+      "notes": "We'll provide a final perspective on where we're headed",
+      "number": 28
+    },
+    {
+      "title": "Final Q&A Session (Open Mic)",
+      "content": [
+        "Take a few minutes to ask any remaining questions and clarify any doubts you may have"
+      ],
+      "notes": "",
+      "number": 29
+    }
+  ],
+  "estimated_duration": 78,
+  "completion_status": "29/29 slides completed"
+}

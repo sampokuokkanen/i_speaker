@@ -1,0 +1,30 @@
+{
+  "title": "Testing Ruby Applications",
+  "description": "Comprehensive guide to testing Ruby code with various frameworks",
+  "target_audience": "Ruby developers",
+  "duration_minutes": 30,
+  "slides": [
+    {
+      "title": "Testing Fundamentals",
+      "content": [
+        "Unit tests",
+        "Integration tests",
+        "Test-driven development"
+      ],
+      "notes": "Speaker notes for Testing Fundamentals",
+      "number": 1
+    },
+    {
+      "title": "RSpec Deep Dive",
+      "content": [
+        "Describe blocks",
+        "Let vs instance variables",
+        "Shared examples"
+      ],
+      "notes": "Speaker notes for RSpec Deep Dive",
+      "number": 2
+    }
+  ],
+  "estimated_duration": 5,
+  "completion_status": "2/2 slides completed"
+}

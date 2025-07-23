@@ -1,0 +1,41 @@
+{
+  "title": "Introduction to i_speaker",
+  "description": "Learn how to create presentations with AI assistance",
+  "target_audience": "Ruby developers",
+  "duration_minutes": 20,
+  "slides": [
+    {
+      "title": "Welcome to i_speaker",
+      "content": [
+        "AI-powered presentation creation",
+        "Step-by-step slide building",
+        "Multiple export formats"
+      ],
+      "notes": "Start with energy and enthusiasm",
+      "number": 1
+    },
+    {
+      "title": "Key Features",
+      "content": [
+        "Interactive console interface",
+        "AI assistance for content generation",
+        "Sample talk templates",
+        "Easy editing and rewriting"
+      ],
+      "notes": "",
+      "number": 2
+    },
+    {
+      "title": "Live Demo",
+      "content": [
+        "Create a new talk from scratch",
+        "Get AI suggestions",
+        "Export in multiple formats"
+      ],
+      "notes": "Show the actual console interface",
+      "number": 3
+    }
+  ],
+  "estimated_duration": 8,
+  "completion_status": "3/3 slides completed"
+}

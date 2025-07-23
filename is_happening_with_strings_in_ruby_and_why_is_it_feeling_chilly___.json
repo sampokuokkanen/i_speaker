@@ -1,0 +1,18 @@
+{
+  "title": "is happening with strings in Ruby and why is it feeling chilly? 🥶",
+  "description": "What is happening with strings in the Ruby source code?\n\nRuby Archaeology: How did we get frozen strings with a magic comment in the first place?\n\nWhat effect will this have on everyday Rubyists?\n\nWhat are “chilled” strings? Is it just like shaved ice with mango?\n\nWhy do we even freeze strings in Ruby?\n\nWhat will change?\n\nA deep dive into strings in Ruby. The Ruby string.c file is currently 13,198 lines long (in contrast, if you exclude comments, the string.rb file is only one line of code!), so it should come as no surprise that it’s sometimes not easy to follow what is changing around there.\n\nWith Ruby 3.4, we got chilled strings, and after that, we can get rid of the magic comments that probably decorate almost all of our Ruby files! Not so fast, though. What are chilled strings? And why do we have to keep the magic comments in our files for a little bit longer?\n\nBut why is this change happening, and what historical background does it have? What will it mean for ordinary Rubyists like us?\n\nAnd we’ll take a look at what Matz said before Ruby 3: “All String literals are immutable (frozen) on Ruby 3”. Will this finally be true for Ruby?\n\nAnd actually, there is a way of getting default frozen strings on current Rubies too… like almost always with Ruby, there is a gem for that.",
+  "target_audience": "RubyConf Taiwan attendants, middle to high level ruby knowledge",
+  "duration_minutes": 30,
+  "slides": [
+    {
+      "title": "Ruby Strings",
+      "content": [
+        "Ruby Strings are powerful"
+      ],
+      "notes": "",
+      "number": 1
+    }
+  ],
+  "estimated_duration": 3,
+  "completion_status": "1/1 slides completed"
+}

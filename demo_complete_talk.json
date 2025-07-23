@@ -1,0 +1,65 @@
+{
+  "title": "Building AI-Powered Ruby Applications",
+  "description": "Learn how to integrate AI capabilities into your Ruby applications using local models",
+  "target_audience": "Ruby developers",
+  "duration_minutes": 25,
+  "slides": [
+    {
+      "title": "Introduction to AI in Ruby Applications",
+      "content": [
+        "Ruby provides excellent support for building AI-powered applications through libraries like NLPGem, Rake-NLP, and Ruby Natural Language Processing (RNL).",
+        "Many popular Ruby frameworks such as Rails and Sinatra have integrated gems that enable AI capabilities, making it easier to incorporate machine learning into existing projects.",
+        "Ruby developers can leverage the power of Ruby's meta-programming features to implement their own machine learning algorithms or integrate third-party libraries for more complex tasks.",
+        "By utilizing tools like TensorFlow.js and PyTorch, developers can utilize popular deep learning frameworks directly within their Ruby applications."
+      ],
+      "notes": "Explain introduction to ai in ruby applications with practical examples and encourage audience questions.",
+      "number": 1
+    },
+    {
+      "title": "Setting up Ollama for Local AI",
+      "content": [
+        "To set up Ollama for local AI, create a new Ruby project and add the following dependencies to your Gemfile: `ollama` and `activesupport`.",
+        "Next, initialize the Ollama library in your main application file (e.g., app.rb) by calling `Ollama.init()` before booting up your Ruby application.",
+        "Configure the Ollama model by creating a new class that inherits from `Ollama::Model` and defines the AI capabilities you want to use, such as classification or regression.",
+        "Use the `ollama` gem's built-in APIs, such as `model.predict()` or `dataset.load()`, to interact with your local Ollama instance within your Ruby application."
+      ],
+      "notes": "Explain setting up ollama for local ai with practical examples and encourage audience questions.",
+      "number": 2
+    },
+    {
+      "title": "Creating Simple Chat Interfaces",
+      "content": [
+        "Use Ruby's built-in `require` method to include the necessary libraries for creating chat interfaces, such as Twilio or Nexmo APIs.",
+        "Utilize the `Thread` class in Ruby to handle asynchronous communication between clients and servers.",
+        "Implement a basic socket server using Ruby's built-in `socket` library to establish real-time connections with clients.",
+        "Leverage the `actionpack` framework's built-in support for WebSockets to enable bi-directional communication over HTTP/2."
+      ],
+      "notes": "Explain creating simple chat interfaces with practical examples and encourage audience questions.",
+      "number": 3
+    },
+    {
+      "title": "Building AI-Powered Tools",
+      "content": [
+        "Use frameworks like Ruby-GNUTS or Rake to automate tasks and integrate AI-powered tools into your workflow.",
+        "Leverage libraries such as OpenCV and Computer Vision gems in Ruby to build image recognition models for computer vision tasks.",
+        "Apply machine learning techniques using Scikit-learn and TensorFlow gems to train predictive models that can be integrated into your applications.",
+        "Integrate with cloud services like AWS SageMaker or Google Cloud AI Platform to access pre-built AI frameworks and tools."
+      ],
+      "notes": "Explain building ai-powered tools with practical examples and encourage audience questions.",
+      "number": 4
+    },
+    {
+      "title": "Best Practices and Security Considerations",
+      "content": [
+        "Always use secure libraries like OpenSSL for encryption and hashing",
+        "Validate and sanitize user input thoroughly to prevent SQL injection and cross-site scripting (XSS) attacks",
+        "Implement proper authentication and authorization mechanisms using Ruby's built-in authlogic gem or other reputable alternatives",
+        "Regularly update dependencies, including Ruby itself, to ensure you have the latest security patches"
+      ],
+      "notes": "Explain best practices and security considerations with practical examples and encourage audience questions.",
+      "number": 5
+    }
+  ],
+  "estimated_duration": 13,
+  "completion_status": "5/5 slides completed"
+}
