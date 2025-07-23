@@ -4,6 +4,7 @@ require "test_helper"
 
 class TestConsoleInterface < Minitest::Test
   def setup
+    ENV["RAKE_TEST"] = "true"  # Skip interactive prompts during tests
     @interface = ISpeaker::ConsoleInterface.new
   end
 
