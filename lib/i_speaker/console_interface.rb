@@ -4,6 +4,7 @@ require "tty-prompt"
 require "tty-spinner"
 require "colorize"
 require "io/console"
+require "benchmark"
 require_relative "ollama_client"
 require_relative "zai_client"
 require_relative "web_content_fetcher"
@@ -11,6 +12,7 @@ require_relative "serper_client"
 require_relative "image_viewer"
 require_relative "syntax_highlighter"
 require_relative "presentation_server"
+require_relative "ascii_art"
 
 begin
   require "ruby_llm"
@@ -986,29 +988,46 @@ module ISpeaker
       # Title - centered with size scaling
       title = slide.title
       title_size = terminal_width > 100 ? :large : :normal
+      
+      # Use ASCII art for short, important titles
+      use_ascii_art = title_size == :large && title.length < 20 && 
+                     (title.include?("DEMO") || title.include?("WELCOME") || 
+                      title.include?("Q&A") || title.include?("THANK") ||
+                      index == 0 || index == @talk.slides.length - 1)
 
-      # Scale title for larger displays
-      if title_size == :large && title.length < 50
-        title_display = title.upcase
-        title_style = title_display.bold.green
+      if use_ascii_art
+        # Display ASCII art title
+        ascii_lines = ISpeaker::AsciiArt.center_large_text(title, terminal_width - 2, :green)
+        ascii_lines.each do |line|
+          right_padding = [terminal_width - 2 - line.gsub(/\e\[[0-9;]*m/, '').length, 0].max
+          puts "║#{line}#{" " * right_padding}║"
+        end
       else
-        title_display = title
-        title_style = title_display.bold.green
+        # Regular title display
+        if title_size == :large && title.length < 50
+          title_display = title.upcase
+          title_style = title_display.bold.green
+        else
+          title_display = title
+          title_style = title_display.bold.green
+        end
+
+        # Handle long titles
+        title_display = title_display[0...(terminal_width - 9)] + "..." if title_display.length > terminal_width - 6
+
+        title_padding = [(terminal_width - 2 - title_display.length) / 2, 0].max
+        right_padding = [terminal_width - 2 - title_padding - title_display.length, 0].max
+        puts "║#{" " * title_padding}#{title_style}#{" " * right_padding}║"
       end
 
-      # Handle long titles
-      title_display = title_display[0...(terminal_width - 9)] + "..." if title_display.length > terminal_width - 6
-
-      title_padding = [(terminal_width - 2 - title_display.length) / 2, 0].max
-      right_padding = [terminal_width - 2 - title_padding - title_display.length, 0].max
-      puts "║#{" " * title_padding}#{title_style}#{" " * right_padding}║"
-
-      # Title underline - make it proportional
-      underline_length = [title_display.length, terminal_width - 20].min
-      underline = "─" * underline_length
-      underline_padding = [(terminal_width - 2 - underline.length) / 2, 0].max
-      right_padding = [terminal_width - 2 - underline_padding - underline.length, 0].max
-      puts "║#{" " * underline_padding}#{underline.green}#{" " * right_padding}║"
+      # Title underline - make it proportional (skip for ASCII art)
+      unless use_ascii_art
+        underline_length = [title.length, terminal_width - 20].min
+        underline = "─" * underline_length
+        underline_padding = [(terminal_width - 2 - underline.length) / 2, 0].max
+        right_padding = [terminal_width - 2 - underline_padding - underline.length, 0].max
+        puts "║#{" " * underline_padding}#{underline.green}#{" " * right_padding}║"
+      end
 
       # Empty lines - adjust based on terminal height
       empty_lines = terminal_height > 30 ? 3 : 2
@@ -1087,7 +1106,17 @@ module ISpeaker
 
           line_padding = [(terminal_width - 2 - visible_length) / 2, 0].max
           right_padding = [terminal_width - 2 - line_padding - visible_length, 0].max
-          puts "║#{" " * line_padding}#{line.light_white}#{" " * right_padding}║"
+          # Make bullet points more prominent
+          display_line = line
+          if line.strip.start_with?("•")
+            display_line = line.gsub(/^(\s*)•/, '\1▸').bold.light_white
+          elsif line.strip.start_with?("▸")
+            display_line = line.bold.light_white
+          else
+            display_line = line.light_white
+          end
+          
+          puts "║#{" " * line_padding}#{display_line}#{" " * right_padding}║"
         end
 
         # Add spacing between items (but not after last)

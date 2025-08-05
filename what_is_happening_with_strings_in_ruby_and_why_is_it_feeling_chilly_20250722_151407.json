@@ -208,12 +208,13 @@
       "slide_type": "content"
     },
     {
-      "title": "Ruby’s String Class History (Deeper Dive)",
+      "title": "Ruby's String Class History (Deeper Dive)",
       "content": [
-        "Ruby 1.9 introduced mutable strings with encoding support (m17n), a major internal change, but they stayed mutable by default.",
-        "In Ruby 2.x, each release improved string handling: e.g. 2.1’s freeze/dedupe, 2.3’s encoding optimizations, etc.",
-        "JRuby (on the JVM) uses Java’s String under the hood; it respects Ruby’s freeze semantics at the API level even though Java strings are inherently immutable.",
-        "TruffleRuby (GraalVM) currently does not freeze dynamic strings by default (unintentionally) and uses frozen literals in core – with no known compatibility issues so far."
+        "Ruby 1.9: Added encoding support (m17n) - strings remained mutable",
+        "Ruby 2.1: Introduced frozen string deduplication for memory savings",
+        "Ruby 2.3: Added `# frozen_string_literal: true` pragma",
+        "JRuby: Uses Java strings internally but maintains Ruby's mutable semantics",
+        "TruffleRuby: Interpolated strings with pragma stay mutable (aligns with Ruby 3.0 behavior)"
       ],
       "notes": "Implementation note: MRI vs JRuby vs Truffle. We focus on MRI, but JRuby has its own approach (Java strings) and Truffle leaves dynamic strings mutable (but core code is frozen).",
       "image_path": null,
