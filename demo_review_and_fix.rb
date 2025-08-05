@@ -3,7 +3,7 @@
 
 # Demo script to showcase Review and Fix Structure capabilities
 
-require_relative 'lib/i_speaker'
+require_relative "lib/i_speaker"
 
 puts "🔍 Review and Fix Structure Demo".cyan.bold
 puts "=" * 50
@@ -96,11 +96,11 @@ issues = [
 
 issues.each_with_index do |issue, i|
   color = case issue[:severity]
-         when "HIGH" then :red
-         when "MEDIUM" then :yellow
-         when "LOW" then :light_blue
-         end
-  
+          when "HIGH" then :red
+          when "MEDIUM" then :yellow
+          when "LOW" then :light_blue
+          end
+
   puts "\n#{i + 1}. #{issue[:description]}".send(color)
   puts "   Category: #{issue[:category]}".light_blue
   puts "   Severity: #{issue[:severity]}".send(color)
@@ -137,12 +137,12 @@ sample_analysis = {
       "category" => "pacing",
       "severity" => "high",
       "description" => "7 slides for 45 minutes results in 6.4 minutes per slide, which is too slow for technical content",
-      "affected_slides" => [1,2,3,4,5,6,7],
+      "affected_slides" => [1, 2, 3, 4, 5, 6, 7],
       "impact" => "Audience will lose focus, content will feel rushed at the end"
     },
     {
       "category" => "structure",
-      "severity" => "high", 
+      "severity" => "high",
       "description" => "Missing proper introduction structure with agenda and learning objectives",
       "affected_slides" => [1],
       "impact" => "Audience won't know what to expect or why they should care"
@@ -151,7 +151,7 @@ sample_analysis = {
       "category" => "content",
       "severity" => "high",
       "description" => "Complex topics like model training and monitoring need more detailed explanation",
-      "affected_slides" => [4,6],
+      "affected_slides" => [4, 6],
       "impact" => "Engineers won't have enough practical guidance to apply concepts"
     },
     {
@@ -172,7 +172,7 @@ sample_analysis = {
         "title" => "Agenda & Learning Objectives",
         "content" => [
           "What you'll learn today",
-          "ML deployment pipeline overview", 
+          "ML deployment pipeline overview",
           "Hands-on deployment strategies",
           "Real-world monitoring examples",
           "Q&A and discussion"
@@ -189,7 +189,7 @@ sample_analysis = {
         "title" => "Case Study: Netflix Recommendation Engine",
         "content" => [
           "Challenge: 100M+ users, real-time predictions",
-          "Solution: A/B testing framework for models", 
+          "Solution: A/B testing framework for models",
           "Implementation: Canary deployments with automatic rollback",
           "Results: 20% improvement in engagement",
           "Lessons learned"
@@ -206,26 +206,26 @@ puts "\n📊 Analysis Results Display:".green
 puts "\n🔍 Issues Found:".red.bold
 sample_analysis["issues_found"].each_with_index do |issue, i|
   severity_color = case issue["severity"]
-                  when "high" then :red
-                  when "medium" then :yellow
-                  when "low" then :light_blue
-                  else :white
-                  end
-  
-  puts "\n#{i + 1}. #{issue['description']}".send(severity_color)
-  puts "   Category: #{issue['category'].capitalize}".light_blue
-  puts "   Severity: #{issue['severity'].upcase}".send(severity_color)
-  puts "   Affects slides: #{issue['affected_slides'].join(', ')}".light_blue
-  puts "   Impact: #{issue['impact']}".light_blue
+                   when "high" then :red
+                   when "medium" then :yellow
+                   when "low" then :light_blue
+                   else :white
+                   end
+
+  puts "\n#{i + 1}. #{issue["description"]}".send(severity_color)
+  puts "   Category: #{issue["category"].capitalize}".light_blue
+  puts "   Severity: #{issue["severity"].upcase}".send(severity_color)
+  puts "   Affects slides: #{issue["affected_slides"].join(", ")}".light_blue
+  puts "   Impact: #{issue["impact"]}".light_blue
 end
 
 puts "\n🛠️  Suggested Fixes:".green.bold
 sample_analysis["fixes"].each_with_index do |fix, i|
-  puts "\n#{i + 1}. #{fix['description']}".green
-  puts "   Type: #{fix['type'].gsub('_', ' ').capitalize}".light_blue
-  puts "   Action: #{fix['action']}".light_blue
-  puts "   Position: #{fix['position']}".light_blue
-  puts "   New slide: \"#{fix.dig('new_content', 'title')}\"".light_green if fix.dig('new_content', 'title')
+  puts "\n#{i + 1}. #{fix["description"]}".green
+  puts "   Type: #{fix["type"].gsub("_", " ").capitalize}".light_blue
+  puts "   Action: #{fix["action"]}".light_blue
+  puts "   Position: #{fix["position"]}".light_blue
+  puts "   New slide: \"#{fix.dig("new_content", "title")}\"".light_green if fix.dig("new_content", "title")
 end
 
 puts "\n📋 Overall Assessment:".cyan.bold
@@ -253,7 +253,7 @@ improved_structure = [
   "1. Machine Learning in Production (title slide)",
   "2. Agenda & Learning Objectives (NEW)",
   "3. Types of ML Models",
-  "4. Data Preprocessing", 
+  "4. Data Preprocessing",
   "5. Model Training",
   "6. Case Study: Netflix Recommendation Engine (NEW)",
   "7. Deployment Strategies",
@@ -299,7 +299,7 @@ puts "• Run again after major content changes"
 
 puts "\n🚀 Usage Flow:".green.bold
 puts "1. Create or load your presentation"
-puts "2. Go to AI assistance → \"Review and Fix Structure\""  
+puts "2. Go to AI assistance → \"Review and Fix Structure\""
 puts "3. Select focus areas (flow, pacing, examples, etc.)"
 puts "4. Describe specific issues you've noticed"
 puts "5. Set your presentation goal"

@@ -3,7 +3,7 @@
 
 # Test script to verify AI error handling fixes
 
-require_relative 'lib/i_speaker'
+require_relative "lib/i_speaker"
 
 puts "🧪 Testing AI Error Handling Fixes".cyan.bold
 puts "=" * 40
@@ -20,28 +20,28 @@ class TestConsoleInterface < ISpeaker::ConsoleInterface
       target_audience: "Testers",
       duration_minutes: 20
     )
-    
+
     puts "✅ Basic talk created: #{@talk.title}".green
-    puts "Talk object exists: #{@talk.nil? ? 'NO' : 'YES'}".blue
-    
+    puts "Talk object exists: #{@talk.nil? ? "NO" : "YES"}".blue
+
     begin
       # Simulate a JSON parsing error
       raise JSON::ParserError.new("Test parsing error")
-    rescue JSON::ParserError => e
+    rescue JSON::ParserError
       puts "\n❌ AI response wasn't in expected JSON format. Using simpler approach.".red
       puts "✅ Basic talk structure created successfully!".green
       puts @talk.summary.light_blue if @talk
       puts "\n💡 You can now add slides manually or use individual AI assistance from the main menu.".blue
     end
   end
-  
+
   def test_json_extraction
     puts "\n2. Testing JSON extraction from mixed response...".yellow
-    
+
     # Test the JSON extraction logic
     mixed_response = <<~RESPONSE
       Here is the presentation structure you requested:
-      
+
       {
         "description": "A comprehensive guide to Ruby programming fundamentals",
         "slides": [
@@ -57,17 +57,17 @@ class TestConsoleInterface < ISpeaker::ConsoleInterface
           }
         ]
       }
-      
+
       This should work well for your presentation!
     RESPONSE
-    
+
     # Extract JSON using the same logic as in the actual code
     json_content = nil
     if mixed_response.include?("{") && mixed_response.include?("}")
       start_index = mixed_response.index("{")
       bracket_count = 0
       end_index = start_index
-      
+
       mixed_response[start_index..-1].each_char.with_index(start_index) do |char, i|
         bracket_count += 1 if char == "{"
         bracket_count -= 1 if char == "}"
@@ -76,16 +76,16 @@ class TestConsoleInterface < ISpeaker::ConsoleInterface
           break
         end
       end
-      
+
       json_content = mixed_response[start_index..end_index]
     end
-    
+
     if json_content
       begin
         parsed = JSON.parse(json_content)
         puts "✅ Successfully extracted and parsed JSON".green
-        puts "Description: #{parsed['description'][0..50]}...".blue
-        puts "Slides found: #{parsed['slides'].length}".blue
+        puts "Description: #{parsed["description"][0..50]}...".blue
+        puts "Slides found: #{parsed["slides"].length}".blue
       rescue JSON::ParserError => e
         puts "❌ JSON extraction failed: #{e.message}".red
       end

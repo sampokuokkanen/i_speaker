@@ -24,7 +24,6 @@ class TestTalk < Minitest::Test
   def test_add_slide
     slide = @talk.add_slide
     assert_equal(1, @talk.slide_count)
-    assert_equal(1, slide.number)
     assert_includes(@talk.slides, slide)
   end
 
@@ -32,7 +31,6 @@ class TestTalk < Minitest::Test
     existing_slide = ISpeaker::Slide.new(title: "Existing")
     slide = @talk.add_slide(existing_slide)
     assert_equal(existing_slide, slide)
-    assert_equal(1, slide.number)
   end
 
   def test_remove_slide
@@ -43,10 +41,6 @@ class TestTalk < Minitest::Test
     removed = @talk.remove_slide(1)
     assert_equal(slide2, removed)
     assert_equal(2, @talk.slide_count)
-
-    # Check renumbering
-    assert_equal(1, @talk.slides[0].number)
-    assert_equal(2, @talk.slides[1].number)
   end
 
   def test_move_slide
@@ -65,11 +59,6 @@ class TestTalk < Minitest::Test
     assert_equal("Second", @talk.slides[0].title)
     assert_equal("Third", @talk.slides[1].title)
     assert_equal("First", @talk.slides[2].title)
-
-    # Check renumbering
-    assert_equal(1, @talk.slides[0].number)
-    assert_equal(2, @talk.slides[1].number)
-    assert_equal(3, @talk.slides[2].number)
   end
 
   def test_get_slide

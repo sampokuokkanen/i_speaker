@@ -3,9 +3,14 @@
 require "tty-prompt"
 require "tty-spinner"
 require "colorize"
+require "io/console"
 require_relative "ollama_client"
+require_relative "zai_client"
 require_relative "web_content_fetcher"
 require_relative "serper_client"
+require_relative "image_viewer"
+require_relative "syntax_highlighter"
+require_relative "presentation_server"
 
 begin
   require "ruby_llm"
@@ -22,7 +27,10 @@ module ISpeaker
       @ai_available = false
       @serper_client = SerperClient.new
       @current_filename = nil
-      @auto_save_enabled = true
+      @commentary_cache = {}
+      @commentary_threads = {}
+      @commentary_ready = false
+      @presentation_server = PresentationServer.new
       setup_ai
       check_serper_setup
     end
@@ -59,24 +67,26 @@ module ISpeaker
     end
 
     def handle_exit
-      if @talk && @auto_save_enabled
+      if @talk
         puts "\n\n💾 Saving your work before exit...".blue
         auto_save
         puts "\n✅ Work saved successfully!".green
-      elsif @talk && !@auto_save_enabled
-        puts "\n\n⚠️  You have unsaved changes!".yellow
-        if @current_filename
-          puts "Last saved to: #{@current_filename}".light_blue
-        else
-          puts "This talk has never been saved.".light_blue
-        end
       end
       puts "Goodbye! 👋".green
       exit(0)
     end
 
     def setup_ai
-      # First, try Ollama (local AI)
+      # First priority: Z AI
+      zai_client = ZAIClient.new
+      if zai_client.available?
+        @ai_client = zai_client
+        @ai_available = true
+        puts "✅ Z AI connected (GLM-4.5)".green
+        return
+      end
+
+      # Second priority: Ollama (local AI)
       ollama_client = OllamaClient.new
       if ollama_client.available?
         @ai_client = ollama_client
@@ -102,7 +112,8 @@ module ISpeaker
       return if @ai_available
 
       puts "ℹ️  AI features disabled. To enable:".light_blue
-      puts "   - Make sure Ollama is running: ollama serve".light_blue
+      puts "   - Set ZAI_API_KEY environment variable (preferred)".light_blue
+      puts "   - Or make sure Ollama is running: ollama serve".light_blue
       puts "   - Or configure RubyLLM with API keys".light_blue
     end
 
@@ -110,7 +121,7 @@ module ISpeaker
       return nil unless @ai_available
 
       case @ai_client
-      when OllamaClient
+      when OllamaClient, ZAIClient
         @ai_client.ask(prompt, system: system)
       when :ruby_llm
         if system
@@ -179,7 +190,7 @@ module ISpeaker
     end
 
     def auto_save
-      return unless @auto_save_enabled && @talk
+      return unless @talk
 
       # Generate filename if we don't have one
       if @current_filename.nil?
@@ -192,6 +203,7 @@ module ISpeaker
 
       begin
         @talk.save_to_file(@current_filename)
+        save_commentary_cache # Save commentary cache alongside talk
         print "💾" # Simple save indicator
       rescue StandardError => e
         puts "\n⚠️  Auto-save failed: #{e.message}".yellow
@@ -475,8 +487,10 @@ module ISpeaker
     end
 
     def load_talk
-      # Find all JSON files in the current directory
-      json_files = Dir.glob("*.json").sort_by { |f| File.mtime(f) }.reverse
+      # Find all JSON files in the current directory, excluding commentary files
+      json_files = Dir.glob("*.json")
+                      .reject { |f| f.end_with?("_commentary.json") }
+                      .sort_by { |f| File.mtime(f) }.reverse
 
       if json_files.empty?
         puts "\n📁 No talk files found in current directory.".yellow
@@ -530,6 +544,7 @@ module ISpeaker
         begin
           @talk = Talk.load_from_file(filename)
           @current_filename = filename # Set current filename for auto-save
+          load_commentary_cache # Load cached commentary
           puts "\n✅ Talk loaded successfully!".green
           puts @talk.summary.light_blue
         rescue StandardError => e
@@ -622,19 +637,19 @@ module ISpeaker
     end
 
     def main_menu
-      auto_save_status = @auto_save_enabled ? "ON" : "OFF"
-      current_file_info = @current_filename ? " [#{@current_filename}]" : " [unsaved]"
+      current_file_info = @current_filename ? " [#{@current_filename}]" : " [auto-saved]"
 
       choice = @prompt.select("\n🎤 #{@talk.title}#{current_file_info}".bold + " - What would you like to do?", [
                                 { name: "View talk overview", value: :overview },
+                                { name: "🎬 Present slideshow", value: :retro_slideshow },
+                                { name: "📝 Present with notes server", value: :present_with_notes },
                                 { name: "Create new slide", value: :new_slide },
+                                { name: "📷 Create image slide", value: :new_image_slide },
                                 { name: "Edit existing slide", value: :edit_slide },
                                 { name: "Reorder slides", value: :reorder },
                                 { name: "Delete slide", value: :delete_slide },
                                 { name: "AI assistance", value: :ai_help },
-                                { name: "Save talk", value: :save },
                                 { name: "Export talk", value: :export },
-                                { name: "Auto-save: #{auto_save_status} (toggle)", value: :toggle_autosave },
                                 { name: "Start over (new talk)", value: :new_talk },
                                 { name: "Exit", value: :exit },
                               ])
@@ -642,8 +657,14 @@ module ISpeaker
       case choice
       when :overview
         show_talk_overview
+      when :retro_slideshow
+        retro_slideshow
+      when :present_with_notes
+        present_with_notes_server
       when :new_slide
         create_new_slide
+      when :new_image_slide
+        create_new_image_slide
       when :edit_slide
         edit_slide_menu
       when :reorder
@@ -652,35 +673,14 @@ module ISpeaker
         delete_slide
       when :ai_help
         ai_assistance_menu
-      when :save
-        save_talk
       when :export
         export_talk
-      when :toggle_autosave
-        toggle_autosave
       when :new_talk
         @talk = nil
         @current_filename = nil # Reset filename for new talk
       when :exit
         puts "Goodbye! 👋".green
         exit(0)
-      end
-    end
-
-    def toggle_autosave
-      @auto_save_enabled = !@auto_save_enabled
-      status = @auto_save_enabled ? "enabled" : "disabled"
-      puts "\n💾 Auto-save has been #{status}".blue
-
-      if @auto_save_enabled
-        puts "   Your work will be automatically saved after each change.".light_blue
-        if @current_filename
-          puts "   Saving to: #{@current_filename}".light_blue
-        else
-          puts "   A filename will be generated automatically when needed.".light_blue
-        end
-      else
-        puts "   Remember to save manually to avoid losing your work!".yellow
       end
     end
 
@@ -698,11 +698,886 @@ module ISpeaker
       @prompt.keypress("\nPress any key to continue...")
     end
 
+    def retro_slideshow
+      if @talk.slides.empty?
+        puts "\n⚠️  No slides to display!".yellow
+        @prompt.keypress("Press any key to continue...")
+        return
+      end
+
+      # Ask if they want AI commentary
+      use_commentary = false
+      if @ai_available
+        puts "\n🎭 Would you like live AI commentary during the slideshow?".cyan
+        puts "   The AI will generate witty remarks and dad jokes about each slide!".light_blue
+        use_commentary = @prompt.yes?("Enable AI Comedy Commentary?")
+      end
+
+      current_slide_index = 0
+      start_time = Time.now
+      timer_paused = false
+      pause_start_time = nil
+      total_pause_duration = 0
+
+      puts "\n🎬 Starting presentation#{" with AI commentary" if use_commentary}...".cyan
+      puts "Navigation: SPACE/→ = Next | ← = Previous | ENTER = IRB Demo | C = Commentary | P = Pause/Resume | ESC = Exit".light_black
+      puts "Tip: Images will prompt ENTER to view | IRB slides launch interactive Ruby | Timer shows elapsed time".light_black
+      sleep(2)
+
+      loop do
+        # Preload commentary for nearby slides
+        preload_commentary_for_slides(@talk.slides, current_slide_index) if use_commentary
+
+        # Calculate elapsed time
+        current_pause_duration = if timer_paused && pause_start_time
+                                   Time.now - pause_start_time
+                                 else
+                                   0
+                                 end
+
+        elapsed_seconds = (Time.now - start_time - total_pause_duration - current_pause_duration).to_i
+
+        system("clear") || system("cls")
+        display_retro_slide(current_slide_index,
+                            show_commentary: use_commentary,
+                            elapsed_time: elapsed_seconds,
+                            timer_paused: timer_paused,
+                            total_slides: @talk.slides.length)
+
+        # Get single keypress without showing menu
+        # Check if image slide returned a navigation key
+        key = @last_key || get_single_keypress
+        @last_key = nil
+
+        case key
+        when :left
+          current_slide_index -= 1 if current_slide_index > 0
+        when :right, :space
+          current_slide_index += 1 if current_slide_index < @talk.slides.length - 1
+          # Stay on last slide instead of exiting
+        when :enter
+          # Check if current slide is an IRB demo slide
+          current_slide = @talk.slides[current_slide_index]
+          if is_irb_slide?(current_slide)
+            launch_irb_for_slide(current_slide)
+          end
+        when :c
+          # Toggle commentary
+          if @ai_available
+            use_commentary = !use_commentary
+            puts "\n🎭 Commentary #{use_commentary ? "ON" : "OFF"}".yellow
+            sleep(1)
+          end
+        when :p
+          # Toggle pause
+          if timer_paused
+            # Resume
+            total_pause_duration += Time.now - pause_start_time if pause_start_time
+            timer_paused = false
+            pause_start_time = nil
+          else
+            # Pause
+            timer_paused = true
+            pause_start_time = Time.now
+          end
+        when :escape
+          system("clear") || system("cls")
+          break
+        end
+      end
+    end
+
+    def present_with_notes_server
+      if @talk.slides.empty?
+        puts "\n⚠️  No slides to display!".yellow
+        @prompt.keypress("Press any key to continue...")
+        return
+      end
+
+      # Start notes server
+      port = 9000
+      front_object = @presentation_server.start_server(port)
+
+      unless front_object
+        puts "Could not start notes server. Falling back to regular slideshow."
+        retro_slideshow
+        return
+      end
+
+      # Use the front object for all server operations
+      @drb_server = front_object
+
+      # Initialize server with talk information
+      initial_slide = @talk.slides.first
+      @drb_server.update_slide(0, initial_slide, @talk.slides.length, @talk.title)
+
+      # Ask if they want AI commentary
+      use_commentary = false
+      if @ai_available
+        puts "\n🎭 Would you like live AI commentary during the slideshow?".cyan
+        puts "   The AI will generate witty remarks and dad jokes about each slide!".light_blue
+        use_commentary = @prompt.yes?("Enable AI Comedy Commentary?")
+      end
+
+      current_slide_index = 0
+      start_time = Time.now
+      timer_paused = false
+      pause_start_time = nil
+      total_pause_duration = 0
+
+      puts "\n🎬 Starting presentation with notes server#{" and AI commentary" if use_commentary}...".cyan
+      puts "Navigation: SPACE/→ = Next | ← = Previous | ENTER = IRB Demo | C = Commentary | P = Pause/Resume | ESC = Exit".light_black
+      puts "📝 Run 'i_speaker_notes #{port}' in another terminal for speaker notes".yellow
+      puts "Tip: Images will prompt ENTER to view | IRB slides launch interactive Ruby | Timer shows elapsed time".light_black
+
+      # Give user time to connect notes viewer
+      puts "\n⏳ Waiting for notes viewer connection...".light_blue
+      puts "   Press SPACE to start presentation now, or wait 10 seconds".light_black
+
+      # Wait for either keypress or timeout
+      start_wait = Time.now
+      key_pressed = false
+
+      while (Time.now - start_wait) < 10 && !key_pressed
+        if STDIN.ready?
+          key = STDIN.getch
+          if key == " "
+            key_pressed = true
+            puts "▶️  Starting presentation...".green
+          end
+        end
+        sleep(0.1)
+      end
+
+      puts "⏰ Auto-starting presentation...".light_blue unless key_pressed
+
+      sleep(1)
+
+      begin
+        loop do
+          # Preload commentary for nearby slides
+          preload_commentary_for_slides(@talk.slides, current_slide_index) if use_commentary
+
+          # Calculate elapsed time
+          current_pause_duration = if timer_paused && pause_start_time
+                                     Time.now - pause_start_time
+                                   else
+                                     0
+                                   end
+
+          elapsed_seconds = (Time.now - start_time - total_pause_duration - current_pause_duration).to_i
+
+          # Update notes server with current slide (moved to after navigation)
+
+          system("clear") || system("cls")
+          display_retro_slide(current_slide_index,
+                              show_commentary: use_commentary,
+                              elapsed_time: elapsed_seconds,
+                              timer_paused: timer_paused,
+                              total_slides: @talk.slides.length)
+
+          # Get single keypress without showing menu, with timeout for commentary updates
+          # Check if image slide returned a navigation key
+          if @last_key
+            key = @last_key
+            @last_key = nil
+          else
+            # Wait for keypress or check for commentary updates every 0.5 seconds
+            key = nil
+            start_time = Time.now
+            while key.nil? && (Time.now - start_time) < 0.5
+              if STDIN.ready?
+                key = get_single_keypress
+              else
+                sleep(0.1)
+              end
+            end
+            
+            # If no key pressed but commentary might be ready, refresh display
+            if key.nil? && use_commentary && @commentary_ready
+              @commentary_ready = false
+              next # Skip to next loop iteration to refresh display
+            end
+            
+            # If still no key, wait for actual keypress
+            key ||= get_single_keypress
+          end
+
+          case key
+          when :left
+            current_slide_index -= 1 if current_slide_index > 0
+          when :right, :space
+            current_slide_index += 1 if current_slide_index < @talk.slides.length - 1
+            # Stay on last slide instead of exiting
+          when :enter
+            # Check if current slide is an IRB demo slide
+            current_slide = @talk.slides[current_slide_index]
+            if is_irb_slide?(current_slide)
+              launch_irb_for_slide(current_slide)
+            end
+          when :c
+            # Toggle commentary
+            if @ai_available
+              use_commentary = !use_commentary
+              puts "\n🎭 Commentary #{use_commentary ? "ON" : "OFF"}".yellow
+              sleep(1)
+            end
+          when :p
+            # Toggle pause
+            if timer_paused
+              # Resume
+              total_pause_duration += Time.now - pause_start_time if pause_start_time
+              timer_paused = false
+              pause_start_time = nil
+            else
+              # Pause
+              timer_paused = true
+              pause_start_time = Time.now
+            end
+          when :escape
+            system("clear") || system("cls")
+            break
+          end
+          
+          # Update notes server with current slide after any navigation
+          current_slide = @talk.slides[current_slide_index]
+          @drb_server.update_slide(current_slide_index, current_slide, @talk.slides.length, @talk.title)
+        end
+      ensure
+        # Clean up notes server
+        @presentation_server.stop_server
+        puts "\n📝 Notes server stopped.".light_black
+      end
+    end
+
+    def display_retro_slide(index, show_commentary: false, elapsed_time: 0, timer_paused: false, total_slides: nil)
+      slide = @talk.slides[index]
+
+      # Handle image slides specially
+      if slide.image_slide? && slide.has_valid_image?
+        display_image_slide(slide, index, show_commentary, elapsed_time, timer_paused)
+        return
+      end
+
+      # Get actual terminal dimensions
+      terminal_height, terminal_width = get_terminal_size
+
+      # Leave some margin for safety
+      terminal_width -= 2
+      terminal_height -= 3
+
+      # Create retro border
+      puts "╔#{"═" * (terminal_width - 2)}╗"
+
+      # Timer and slide info in top bar
+      timer_display = format_timer(elapsed_time, timer_paused, index, @talk.slides.length, @talk.duration_minutes)
+      slide_info = "#{index + 1}/#{@talk.slides.length}"
+
+      # Calculate spacing for top bar
+      timer_length = timer_display.gsub(/\e\[[0-9;]*m/, "").length # Remove color codes for length
+      slide_info_length = slide_info.length
+      remaining_space = [terminal_width - 2 - timer_length - slide_info_length - 2, 0].max
+
+      puts "║ #{timer_display}#{" " * remaining_space}#{slide_info.light_black} ║"
+
+      # Empty line
+      puts "║#{" " * (terminal_width - 2)}║"
+
+      # Title - centered with size scaling
+      title = slide.title
+      title_size = terminal_width > 100 ? :large : :normal
+
+      # Scale title for larger displays
+      if title_size == :large && title.length < 50
+        title_display = title.upcase
+        title_style = title_display.bold.green
+      else
+        title_display = title
+        title_style = title_display.bold.green
+      end
+
+      # Handle long titles
+      title_display = title_display[0...(terminal_width - 9)] + "..." if title_display.length > terminal_width - 6
+
+      title_padding = [(terminal_width - 2 - title_display.length) / 2, 0].max
+      right_padding = [terminal_width - 2 - title_padding - title_display.length, 0].max
+      puts "║#{" " * title_padding}#{title_style}#{" " * right_padding}║"
+
+      # Title underline - make it proportional
+      underline_length = [title_display.length, terminal_width - 20].min
+      underline = "─" * underline_length
+      underline_padding = [(terminal_width - 2 - underline.length) / 2, 0].max
+      right_padding = [terminal_width - 2 - underline_padding - underline.length, 0].max
+      puts "║#{" " * underline_padding}#{underline.green}#{" " * right_padding}║"
+
+      # Empty lines - adjust based on terminal height
+      empty_lines = terminal_height > 30 ? 3 : 2
+      empty_lines.times { puts "║#{" " * (terminal_width - 2)}║" }
+
+      # Content - prepare and wrap long lines, with code highlighting
+      content_items = []
+      max_content_width = terminal_width - 10 # Leave margin for bullets and padding
+
+      slide.content.each do |item|
+        # Check if this looks like a code block (indented or contains code patterns)
+        if is_code_block?(item)
+          # Format as code block with syntax highlighting - keep as single block
+          highlighted_code = SyntaxHighlighter.format_code_block(item.strip)
+          content_items << { type: :code_block, content: highlighted_code }
+        elsif item.length > max_content_width - 2
+          # Regular text content with bullet point
+          wrapped_items = wrap_text("• #{item}", max_content_width)
+          wrapped_items.each { |line| content_items << { type: :text, content: line } }
+        else
+          content_items << { type: :text, content: "• #{item}" }
+        end
+      end
+
+      # Calculate vertical padding for full screen usage
+      empty_lines = terminal_height > 30 ? 3 : 2
+      header_lines = 5 + empty_lines # top border, timer bar, empty line, title, underline, empty lines
+      footer_lines = 3 # bottom border, empty line, nav hint
+      available_height = terminal_height - header_lines - footer_lines
+
+      # Calculate total content height including code blocks
+      total_content_lines = 0
+      content_items.each do |item|
+        if item[:type] == :code_block
+          total_content_lines += item[:content].split("\n").length
+        else
+          total_content_lines += 1
+        end
+      end
+      
+      # Calculate content area with spacing between items
+      content_height = content_items.empty? ? 0 : (total_content_lines + (content_items.length - 1))
+      remaining_lines = available_height - content_height
+      top_padding = [remaining_lines / 2, 0].max
+      bottom_padding = [remaining_lines - top_padding, 0].max
+
+      # Add top padding
+      top_padding.times { puts "║#{" " * (terminal_width - 2)}║" }
+
+      # Display content with proper handling for code blocks
+      content_items.each_with_index do |item, idx|
+        if item[:type] == :code_block
+          # Display code block as a unit, centered as a whole
+          code_lines = item[:content].split("\n")
+          
+          # Find the widest line for centering the entire block
+          max_visible_width = code_lines.map { |line| strip_ansi_codes(line).length }.max || 0
+          block_padding = [(terminal_width - 2 - max_visible_width) / 2, 0].max
+          
+          code_lines.each do |line|
+            visible_length = strip_ansi_codes(line).length
+            # Left-align within the code block, but center the block itself
+            line_padding = block_padding
+            right_padding = [terminal_width - 2 - line_padding - visible_length, 0].max
+            puts "║#{" " * line_padding}#{line}#{" " * right_padding}║"
+          end
+        else
+          # Regular text content - center normally
+          line = item[:content]
+          visible_length = strip_ansi_codes(line).length
+          
+          if visible_length > terminal_width - 4
+            line = truncate_with_ansi(line, terminal_width - 7) + "..."
+            visible_length = strip_ansi_codes(line).length
+          end
+
+          line_padding = [(terminal_width - 2 - visible_length) / 2, 0].max
+          right_padding = [terminal_width - 2 - line_padding - visible_length, 0].max
+          puts "║#{" " * line_padding}#{line.light_white}#{" " * right_padding}║"
+        end
+
+        # Add spacing between items (but not after last)
+        puts "║#{" " * (terminal_width - 2)}║" if idx < content_items.length - 1
+      end
+
+      # Add bottom padding to fill screen
+      bottom_padding.times { puts "║#{" " * (terminal_width - 2)}║" }
+
+      # Bottom border
+      puts "╚#{"═" * (terminal_width - 2)}╝"
+
+      # AI Commentary section
+      if show_commentary && @ai_available
+        commentary = generate_slide_commentary(slide)
+        if commentary && !commentary.strip.empty?
+          puts "\n┌─ 🎭 AI COMEDY CORNER ─────────────────────────────────────────────────┐".yellow
+          commentary_lines = wrap_text(commentary, terminal_width - 6)
+          commentary_lines.each do |line|
+            padded_line = line.ljust(terminal_width - 6)
+            puts "│ #{padded_line.light_yellow} │".yellow
+          end
+          puts "└───────────────────────────────────────────────────────────────────────┘".yellow
+        end
+      end
+    end
+
+    def display_image_slide(slide, index, show_commentary, elapsed_time = 0, timer_paused = false)
+      # Get actual terminal dimensions
+      _, terminal_width = get_terminal_size
+      terminal_width -= 2
+
+      # Display header
+      puts "╔#{"═" * (terminal_width - 2)}╗"
+
+      # Timer and slide info in top bar
+      timer_display = format_timer(elapsed_time, timer_paused, index, @talk.slides.length, @talk.duration_minutes)
+      slide_info = "#{index + 1}/#{@talk.slides.length}"
+
+      # Calculate spacing
+      timer_length = timer_display.gsub(/\e\[[0-9;]*m/, "").length
+      slide_info_length = slide_info.length
+      remaining_space = [terminal_width - 2 - timer_length - slide_info_length - 2, 0].max
+
+      puts "║ #{timer_display}#{" " * remaining_space}#{slide_info.light_black} ║"
+      puts "║#{" " * (terminal_width - 2)}║"
+
+      # Title
+      title = slide.title
+      title_padding = [(terminal_width - 2 - title.length) / 2, 0].max
+      right_padding = [terminal_width - 2 - title_padding - title.length, 0].max
+      puts "║#{" " * title_padding}#{title.bold.green}#{" " * right_padding}║"
+
+      # Image indicator
+      image_name = File.basename(slide.image_path)
+      image_text = "📷 #{image_name}"
+      image_padding = [(terminal_width - 2 - image_text.length) / 2, 0].max
+      right_padding = [terminal_width - 2 - image_padding - image_text.length, 0].max
+      puts "║#{" " * image_padding}#{image_text.light_blue}#{" " * right_padding}║"
+
+      puts "║#{" " * (terminal_width - 2)}║"
+
+      # Content (if mixed slide)
+      if slide.slide_type == :mixed && !slide.content.empty?
+        slide.content.each do |item|
+          bullet_line = "• #{item}"
+          line_padding = [(terminal_width - 2 - bullet_line.length) / 2, 0].max
+          right_padding = [terminal_width - 2 - line_padding - bullet_line.length, 0].max
+          puts "║#{" " * line_padding}#{bullet_line.light_white}#{" " * right_padding}║"
+        end
+        puts "║#{" " * (terminal_width - 2)}║"
+      end
+
+      # Instructions
+      instruction = "Press ENTER to view image"
+      inst_padding = [(terminal_width - 2 - instruction.length) / 2, 0].max
+      right_padding = [terminal_width - 2 - inst_padding - instruction.length, 0].max
+      puts "║#{" " * inst_padding}#{instruction.yellow}#{" " * right_padding}║"
+
+      puts "╚#{"═" * (terminal_width - 2)}╝"
+
+      # AI Commentary
+      if show_commentary && @ai_available
+        commentary = generate_slide_commentary(slide)
+        if commentary && !commentary.strip.empty?
+          puts "\n┌─ 🎭 AI COMEDY CORNER ─────────────────────────────────────────────────┐".yellow
+          commentary_lines = wrap_text(commentary, terminal_width - 6)
+          commentary_lines.each do |line|
+            padded_line = line.ljust(terminal_width - 6)
+            puts "│ #{padded_line.light_yellow} │".yellow
+          end
+          puts "└───────────────────────────────────────────────────────────────────────┘".yellow
+        end
+      end
+
+      # Navigation hint
+      nav_hint = "ENTER = View Image | SPACE/→ Next | ← Previous | P Pause | ESC Exit"
+      nav_padding = [(terminal_width - nav_hint.length) / 2, 0].max
+      puts "\n#{" " * nav_padding}#{nav_hint.light_black}"
+
+      # Wait for user input and potentially display image
+      key = get_single_keypress
+      if key == :enter
+        system("clear") || system("cls")
+        ImageViewer.display_image_info(slide.image_path)
+        puts ""
+        success = ImageViewer.display_image(slide.image_path)
+        unless success
+          puts "❌ Could not display image. Install viu, feh, sxiv, or fim for image support.".red
+          puts "Press any key to continue...".light_black
+          get_single_keypress
+        end
+      else
+        # Return the key so the main loop can handle navigation
+        @last_key = key
+      end
+    end
+
+    def display_end_screen
+      # Get actual terminal dimensions
+      terminal_height, terminal_width = get_terminal_size
+      terminal_width -= 2
+      terminal_height -= 3
+
+      puts "╔#{"═" * (terminal_width - 2)}╗"
+
+      # Calculate vertical centering
+      content_lines = [
+        "",
+        "THE END",
+        "",
+        @talk.title,
+        "",
+        "Thank you!"
+      ]
+
+      padding_lines = (terminal_height - content_lines.length - 4) / 2
+
+      # Top padding
+      padding_lines.times { puts "║#{" " * (terminal_width - 2)}║" }
+
+      # Display centered content
+      content_lines.each do |line|
+        line_text = if line == "THE END"
+                      line.bold.green
+                    elsif line == @talk.title
+                      line.light_blue
+                    elsif line == "Thank you!"
+                      line.yellow
+                    else
+                      line
+                    end
+
+        display_length = line.length # Approximate, colorize adds hidden chars
+        line_padding = (terminal_width - 2 - display_length) / 2
+        puts "║#{" " * line_padding}#{line_text}#{" " * (terminal_width - 2 - line_padding - display_length)}║"
+      end
+
+      # Bottom padding
+      padding_lines.times { puts "║#{" " * (terminal_width - 2)}║" }
+
+      puts "╚#{"═" * (terminal_width - 2)}╝"
+    end
+
+    def generate_slide_commentary(slide)
+      return nil unless @ai_available
+
+      slide_key = "#{slide.title}_#{slide.content.join("_")}"
+
+      # Return cached commentary if available
+      return @commentary_cache[slide_key] if @commentary_cache[slide_key]
+
+      # Return loading message if currently generating
+      return "🎭 Generating comedy... stand by! 🤖" if @commentary_threads[slide_key]&.alive?
+
+      # Start async generation if not already started
+      unless @commentary_threads[slide_key]
+        @commentary_threads[slide_key] = Thread.new do
+          prompt = <<~PROMPT
+            You're a witty AI comedian providing live commentary during a presentation slideshow.#{" "}
+
+            Slide Title: "#{slide.title}"
+            Slide Content: #{slide.content.join(", ")}
+
+            Generate a short, funny commentary (1-2 sentences max) about this slide. Make it:
+            - Clever and witty like a dad joke or pun
+            - Related to the slide content
+            - Family-friendly but sarcastic
+            - Under 80 characters total
+
+            Examples of the style:
+            - "Frozen strings? Sounds like my ex's personality!"
+            - "Memory optimization? My brain could use some of that!"
+            - "Performance improvements? Unlike my coding skills!"
+
+            Just return the joke, nothing else.
+          PROMPT
+
+          commentary = ai_ask(prompt)
+          # Clean up the response - sometimes AI adds quotes or explanations
+          commentary = commentary.strip.gsub(/^["']|["']$/, "") if commentary
+          commentary = commentary[0..116] + "..." if commentary.length > 120
+
+          @commentary_cache[slide_key] = commentary
+          
+          # Signal that commentary is ready
+          @commentary_ready = true
+        rescue StandardError
+          @commentary_cache[slide_key] = ["Oops, my comedy circuits are frozen!", "404: Joke not found!", "This slide broke my funny bone!"].sample
+          @commentary_ready = true
+        end
+      end
+
+      # Return fallback while generating
+      "🎭 Loading comedy... please wait! 🤖"
+    end
+
+    def preload_commentary_for_slides(slides, current_index)
+      return unless @ai_available
+
+      # Preload commentary for current slide and next few slides
+      preload_range = [current_index - 1, current_index, current_index + 1, current_index + 2]
+      preload_range.select! { |i| i >= 0 && i < slides.length }
+
+      preload_range.each do |index|
+        slide = slides[index]
+        slide_key = "#{slide.title}_#{slide.content.join("_")}"
+
+        # Skip if already cached or generating
+        next if @commentary_cache[slide_key] || @commentary_threads[slide_key]&.alive?
+
+        # Start generation in background
+        generate_slide_commentary(slide)
+      end
+    end
+
+    def save_commentary_cache
+      return unless @talk && @current_filename
+
+      cache_filename = @current_filename.gsub(/\.json$/, "_commentary.json")
+      begin
+        File.write(cache_filename, JSON.pretty_generate(@commentary_cache))
+      rescue StandardError
+        # Fail silently - commentary cache is not critical
+      end
+    end
+
+    def load_commentary_cache
+      return unless @talk && @current_filename
+
+      cache_filename = @current_filename.gsub(/\.json$/, "_commentary.json")
+      return unless File.exist?(cache_filename)
+
+      begin
+        cached_data = JSON.parse(File.read(cache_filename))
+        @commentary_cache.merge!(cached_data) if cached_data.is_a?(Hash)
+      rescue StandardError
+        # Fail silently - commentary cache is not critical
+      end
+    end
+
+    def wrap_text(text, width)
+      return [""] if text.nil? || text.empty?
+
+      words = text.split(" ")
+      lines = []
+      current_line = ""
+
+      words.each do |word|
+        if (current_line + word).length <= width
+          current_line += (current_line.empty? ? "" : " ") + word
+        else
+          lines << current_line unless current_line.empty?
+          current_line = word
+        end
+      end
+
+      lines << current_line unless current_line.empty?
+      lines.empty? ? [""] : lines
+    end
+
+    def is_code_block?(text)
+      return false if text.nil? || text.strip.empty?
+
+      # Check for common code patterns
+      code_patterns = [
+        /^\s*#.*frozen_string_literal/,         # Ruby pragma
+        /def\s+\w+|class\s+\w+|module\s+\w+/,   # Ruby definitions
+        /puts\s+|print\s+|p\s+/,                # Ruby output
+        /require\s+|load\s+/,                   # Ruby requires
+        /=>\s+|<<\s+|\.\w+\(/,                  # Ruby operators/method calls
+        /^\s*[a-zA-Z_]\w*\s*=\s*\w+/, # Variable assignments
+        /\{[^}]*\}|\[[^\]]*\]/,                 # Braces/brackets
+        /function\s+\w+|const\s+\w+/,           # JavaScript
+        /SELECT\s+|INSERT\s+|UPDATE\s+/i,       # SQL
+        /^```/,                                 # Markdown code blocks
+        /^\s{4,}/                               # Indented code (4+ spaces)
+      ]
+
+      code_patterns.any? { |pattern| text.match?(pattern) }
+    end
+
+    # Helper method to strip ANSI color codes for accurate length calculation
+    def strip_ansi_codes(text)
+      text.gsub(/\e\[[0-9;]*m/, "")
+    end
+
+    # Helper method to truncate text while preserving ANSI codes as much as possible
+    def truncate_with_ansi(text, max_length)
+      stripped = strip_ansi_codes(text)
+      return text if stripped.length <= max_length
+      
+      # Simple truncation - more sophisticated preservation could be added later
+      visible_chars = 0
+      result = ""
+      
+      text.each_char.with_index do |char, i|
+        if text[i..i+10]&.match?(/\e\[[0-9;]*m/)
+          # This is start of ANSI sequence, add the whole sequence
+          ansi_match = text[i..-1].match(/\e\[[0-9;]*m/)
+          if ansi_match
+            result += ansi_match[0]
+            i += ansi_match[0].length - 1
+            next
+          end
+        end
+        
+        break if visible_chars >= max_length
+        result += char
+        visible_chars += 1 unless char.match?(/\e/)
+      end
+      
+      result
+    end
+
+    def format_timer(elapsed_seconds, paused = false, current_slide = nil, total_slides = nil, duration_minutes = nil)
+      minutes = elapsed_seconds / 60
+      seconds = elapsed_seconds % 60
+      timer_text = format("%02d:%02d", minutes, seconds)
+
+      # Calculate estimated remaining time if we have the data
+      remaining_text = ""
+      if current_slide && total_slides && duration_minutes && total_slides > 0
+        # Calculate progress and estimated remaining time
+        progress = (current_slide + 1).to_f / total_slides
+        estimated_total_seconds = duration_minutes * 60
+        estimated_remaining_seconds = (estimated_total_seconds * (1 - progress)).to_i
+
+        if estimated_remaining_seconds > 0
+          rem_minutes = estimated_remaining_seconds / 60
+          rem_seconds = estimated_remaining_seconds % 60
+          remaining_text = " | Est. remaining: #{format("%02d:%02d", rem_minutes, rem_seconds)}".light_black
+        end
+      end
+
+      if paused
+        "⏸️  #{timer_text}#{remaining_text}".yellow
+      else
+        "⏱️  #{timer_text}#{remaining_text}".green
+      end
+    end
+
+    def get_terminal_size
+      # Try to get terminal size, with fallback
+
+      require "io/console"
+      rows, cols = IO.console.winsize
+      # Ensure minimum size
+      rows = [rows, 20].max
+      cols = [cols, 60].max
+      [rows, cols]
+    rescue StandardError
+      # Fallback to reasonable defaults
+      [24, 80]
+    end
+
+    def get_single_keypress
+      require "io/console"
+
+      # Raw mode to capture single keypress
+      char = STDIN.getch
+
+      case char
+      when "\e" # Escape sequence
+        next_char = STDIN.getch
+        if next_char == "["
+          arrow = STDIN.getch
+          case arrow
+          when "C" # Right arrow
+            :right
+          when "D" # Left arrow
+            :left
+          else
+            :escape
+          end
+        else
+          :escape
+        end
+      when " " # Space
+        :space
+      when "c", "C" # Commentary toggle
+        :c
+      when "p", "P" # Pause toggle
+        :p
+      when "\r", "\n" # Enter key
+        :enter
+      when "\u0003" # Ctrl+C
+        :escape
+      else
+        :other
+      end
+    end
+
     def create_new_slide
       puts "\n📄 Creating new slide...".green
 
       slide = @talk.add_slide
       edit_slide(slide)
+    end
+
+    def create_new_image_slide
+      puts "\n📷 Creating new image slide...".green
+
+      # Check for available image viewers
+      available_viewers = ImageViewer.available_viewers
+      if available_viewers.empty?
+        puts "\n⚠️  No image viewers found!".yellow
+        puts "Install one of the following for image support:".light_blue
+        ImageViewer::VIEWERS.each do |_name, config|
+          puts "  • #{config[:command]} - #{config[:description]}".light_blue
+        end
+        puts "\nRecommended: `brew install viu` or `apt install viu`".green
+        @prompt.keypress("\nPress any key to continue...")
+        return
+      end
+
+      puts "Available image viewers: #{available_viewers.keys.join(", ")}".light_blue
+      puts "Using: #{ImageViewer.preferred_viewer}".green
+
+      # Get image path
+      image_path = @prompt.ask("\n📂 Enter path to image file:", required: true) do |q|
+        q.validate(/\.(jpg|jpeg|png|gif|bmp|webp)$/i, "Please enter a valid image file (jpg, png, gif, etc.)")
+      end
+
+      # Expand path and check if file exists
+      full_path = File.expand_path(image_path)
+      unless File.exist?(full_path)
+        puts "\n❌ File not found: #{full_path}".red
+        @prompt.keypress("Press any key to continue...")
+        return
+      end
+
+      # Ask where to insert the slide
+      position_options = []
+      position_options << { name: "At the beginning (position 1)", value: 0 }
+
+      @talk.slides.each_with_index do |existing_slide, index|
+        position_options << {
+          name: "After slide #{index + 1}: \"#{existing_slide.title}\"",
+          value: index + 1
+        }
+      end
+
+      position_options << { name: "At the end (position #{@talk.slides.length + 1})", value: @talk.slides.length }
+
+      position = @prompt.select("\n📍 Where would you like to insert this image slide?", position_options)
+
+      # Create image slide at specified position
+      slide = @talk.insert_slide_at(position)
+      slide.slide_type = :image
+      slide.image_path = full_path
+
+      # Get title
+      default_title = File.basename(full_path, ".*").gsub(/[_-]/, " ").split.map(&:capitalize).join(" ")
+      slide.title = @prompt.ask("📝 Slide title:", default: default_title, required: true)
+
+      # Ask if they want to add content too (mixed slide)
+      if @prompt.yes?("\n➕ Add text content to this image slide? (creates a mixed slide)")
+        slide.slide_type = :mixed
+        edit_slide_content(slide)
+      end
+
+      # Add notes
+      notes = @prompt.multiline("\n📋 Speaker notes (optional, press Enter twice when done):")
+      slide.notes = notes.join("\n") if notes&.any?
+
+      puts "\n✅ Image slide created successfully!".green
+      ImageViewer.display_image_info(full_path)
+
+      auto_save
     end
 
     def create_ai_slide
@@ -758,7 +1633,8 @@ module ISpeaker
     def edit_slide(slide, ai_suggestions: nil)
       loop do
         puts "\n" + ("─" * 50)
-        puts "Editing Slide #{slide.number}:".bold
+        slide_index = @talk.slides.index(slide) + 1
+        puts "Editing Slide #{slide_index}:".bold
         puts slide
 
         if ai_suggestions
@@ -1391,7 +2267,7 @@ module ISpeaker
 
       if fixes_applied > 0
         # Renumber all slides
-        @talk.slides.each_with_index { |s, i| s.number = i + 1 }
+        # Slide numbers are now calculated dynamically
         auto_save
       end
 
@@ -1435,7 +2311,7 @@ module ISpeaker
 
       if fixes_applied > 0
         # Renumber all slides
-        @talk.slides.each_with_index { |s, i| s.number = i + 1 }
+        # Slide numbers are now calculated dynamically
         auto_save
 
         puts "\n🎉 Applied #{fixes_applied}/#{fixes.length} fixes successfully!".green.bold
@@ -1758,7 +2634,7 @@ module ISpeaker
           end
 
           # Renumber all slides
-          @talk.slides.each_with_index { |s, i| s.number = i + 1 }
+          # Slide numbers are now calculated dynamically
           auto_save
 
           puts "\n🎉 Created #{slides_data["slides"].length} slides from web content!".green.bold
@@ -2083,7 +2959,7 @@ module ISpeaker
           @talk.slides.insert(position, slide)
 
           # Renumber all slides
-          @talk.slides.each_with_index { |s, i| s.number = i + 1 }
+          # Slide numbers are now calculated dynamically
           auto_save
 
           puts "✅ Created summary slide: #{slide.title}".green
@@ -2226,7 +3102,7 @@ module ISpeaker
           end
 
           # Renumber all slides
-          @talk.slides.each_with_index { |s, i| s.number = i + 1 }
+          # Slide numbers are now calculated dynamically
 
           auto_save
           puts "\n🎉 Added #{slides_data["slides"].length} slides successfully!".green
@@ -2317,7 +3193,7 @@ module ISpeaker
           end
 
           # Renumber all slides
-          @talk.slides.each_with_index { |s, i| s.number = i + 1 }
+          # Slide numbers are now calculated dynamically
 
           auto_save
           puts "\n🎉 Section expanded successfully!".green
@@ -2511,7 +3387,7 @@ module ISpeaker
           end
 
           # Renumber all slides
-          @talk.slides.each_with_index { |s, i| s.number = i + 1 }
+          # Slide numbers are now calculated dynamically
 
           auto_save
 
@@ -3308,16 +4184,6 @@ module ISpeaker
       fixed.strip
     end
 
-    def save_talk
-      filename = @prompt.ask("Enter filename (without extension):",
-                             default: @talk.title.downcase.gsub(/[^a-z0-9]/, "_"))
-      full_filename = "#{filename}.json"
-
-      @talk.save_to_file(full_filename)
-      @current_filename = full_filename # Update current filename for future auto-saves
-      puts "✅ Talk saved as #{full_filename}".green
-    end
-
     def export_talk
       formats = [
         { name: "Markdown (.md)", value: :markdown },
@@ -3455,6 +4321,156 @@ module ISpeaker
       SLIDEV
 
       File.write(filename, content)
+    end
+
+    # Check if a slide is an IRB demo slide
+    def is_irb_slide?(slide)
+      return false unless slide
+      # Check if slide title or content mentions IRB or has code examples
+      slide.title.downcase.include?("irb") ||
+        slide.content.any? { |line| line.include?("```ruby") || line.downcase.include?("irb") }
+    end
+
+    # Execute Ruby code from a demo slide
+    def launch_irb_for_slide(slide)
+      system("clear") || system("cls")
+      
+      puts "╔#{"═" * 78}╗".cyan
+      puts "║#{slide.title.center(78).cyan.bold}║".cyan
+      puts "╚#{"═" * 78}╝".cyan
+      puts
+      
+      # Extract Ruby code from slide content
+      ruby_code = extract_ruby_code(slide.content)
+      
+      if ruby_code.any?
+        puts "💎 Executing Ruby code...".green.bold
+        puts "─" * 40
+        
+        # Create a binding for our execution context
+        demo_binding = binding
+        demo_binding.eval("require 'stringio'")
+        
+        ruby_code.each do |code|
+          puts "#{"> ".green.bold}#{code.yellow}"
+          
+          # Capture stdout
+          old_stdout = $stdout
+          captured_output = StringIO.new
+          
+          begin
+            # Redirect stdout to capture output
+            $stdout = captured_output
+            
+            # Show warnings for chilled strings
+            old_verbose = $VERBOSE
+            $VERBOSE = true
+            Warning[:deprecated] = true if defined?(Warning)
+            
+            # Capture warnings
+            old_stderr = $stderr
+            captured_warnings = StringIO.new
+            $stderr = captured_warnings
+            
+            # Evaluate the code
+            result = demo_binding.eval(code)
+            
+            # Restore stderr and stdout
+            $stderr = old_stderr
+            $stdout = old_stdout
+            $VERBOSE = old_verbose
+            
+            # Display any warnings first (in yellow)
+            warnings = captured_warnings.string
+            if warnings && !warnings.empty?
+              warnings.each_line do |warning|
+                puts "⚠️  #{warning.strip}".yellow if warning.strip.length > 0
+              end
+            end
+            
+            # Display captured output
+            output = captured_output.string
+            if !output.empty?
+              # Format benchmark output specially
+              if output.include?("user") && output.include?("system") && output.include?("total")
+                # It's benchmark output - format it nicely
+                output.each_line do |line|
+                  if line.include?("user") && line.include?("system")
+                    # Header line
+                    puts line.cyan
+                  elsif line.match(/^\s*(mutable:|frozen:)/)
+                    # Benchmark result lines - highlight the times
+                    parts = line.split(/\s+/)
+                    label = parts[0]
+                    times = parts[1..-1]
+                    
+                    # Format with colors
+                    print "  #{label.ljust(12).yellow}"
+                    times.each_with_index do |time, idx|
+                      if idx == 2  # total time column
+                        print time.rjust(12).green.bold
+                      else
+                        print time.rjust(12).light_black
+                      end
+                    end
+                    puts
+                  else
+                    print line
+                  end
+                end
+              else
+                print output
+              end
+            end
+            
+            # Display the result
+            if result.nil?
+              puts "=> nil".light_black
+            elsif result.is_a?(Benchmark::Tms) || result.to_s.include?("Benchmark")
+              # Don't show benchmark objects as results
+            else
+              puts "=> #{result.inspect}".green
+            end
+            
+          rescue => e
+            $stdout = old_stdout
+            $stderr = old_stderr if defined?(old_stderr)
+            puts "❌ #{e.class}: #{e.message}".red
+          end
+        end
+        
+        puts "─" * 40
+      else
+        puts "No Ruby code found in this slide.".yellow
+      end
+      
+      puts "\n🎬 Press any key to return to slideshow...".cyan
+      get_single_keypress
+    end
+
+
+
+    # Extract Ruby code examples from slide content
+    def extract_ruby_code(content)
+      ruby_code = []
+      in_code_block = false
+      
+      content.each do |line|
+        if line.strip == "```ruby"
+          in_code_block = true
+          next
+        elsif line.strip == "```"
+          in_code_block = false
+          next
+        elsif in_code_block
+          # Skip comments and empty lines, extract actual Ruby commands
+          clean_line = line.strip
+          next if clean_line.empty? || clean_line.start_with?("#")
+          ruby_code << clean_line
+        end
+      end
+      
+      ruby_code
     end
   end
 end

@@ -11,14 +11,12 @@ class TestSlide < Minitest::Test
     slide = ISpeaker::Slide.new(
       title: "Test Slide",
       content: ["Point 1", "Point 2"],
-      notes: "Test notes",
-      number: 1,
+      notes: "Test notes"
     )
 
     assert_equal("Test Slide", slide.title)
     assert_equal(["Point 1", "Point 2"], slide.content)
     assert_equal("Test notes", slide.notes)
-    assert_equal(1, slide.number)
   end
 
   def test_slide_initialization_with_string_content
@@ -55,13 +53,11 @@ class TestSlide < Minitest::Test
     @slide.title = "Test"
     @slide.add_content("Content")
     @slide.notes = "Notes"
-    @slide.number = 1
 
     hash = @slide.to_hash
     assert_equal("Test", hash[:title])
     assert_equal(["Content"], hash[:content])
     assert_equal("Notes", hash[:notes])
-    assert_equal(1, hash[:number])
   end
 
   def test_empty?
@@ -83,12 +79,11 @@ class TestSlide < Minitest::Test
 
   def test_display_summary
     @slide.title = "Test Slide"
-    @slide.number = 1
     @slide.add_content("Point 1")
     @slide.add_content("Point 2")
 
     summary = @slide.display_summary
-    assert_includes(summary, "1. Test Slide")
+    assert_includes(summary, "Test Slide")
     assert_includes(summary, "(2 points)")
   end
 end

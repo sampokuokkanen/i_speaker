@@ -1,0 +1,43 @@
+{
+  "title": "Syntax Highlighting Test",
+  "description": "Testing cli-highlight integration",
+  "target_audience": "Developers",
+  "duration_minutes": 10,
+  "slides": [
+    {
+      "title": "Ruby Code Example",
+      "content": [
+        "Here's some Ruby code:",
+        "# frozen_string_literal: true\n\nclass HelloWorld\n  def greet(name)\n    puts \"Hello, #{name}!\"\n  end\nend\n\nhello = HelloWorld.new\nhello.greet('World')",
+        "This should be syntax highlighted!"
+      ],
+      "notes": "",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Regular Content",
+      "content": [
+        "This is regular bullet point content",
+        "No code here, just plain text",
+        "Should display normally with bullets"
+      ],
+      "notes": "",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Performance Benchmark",
+      "content": [
+        "Here's a benchmark example:",
+        "require 'benchmark'\n\nBenchmark.bm do |x|\n  x.report('frozen:') do\n    1_000_000.times { 'Hello'.freeze }\n  end\n  x.report('mutable:') do\n    1_000_000.times { 'Hello'.dup }\n  end\nend",
+        "The frozen version should be faster!"
+      ],
+      "notes": "",
+      "image_path": null,
+      "slide_type": "content"
+    }
+  ],
+  "estimated_duration": 8,
+  "completion_status": "3/3 slides completed"
+}

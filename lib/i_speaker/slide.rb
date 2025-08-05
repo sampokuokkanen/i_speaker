@@ -2,13 +2,14 @@
 
 module ISpeaker
   class Slide
-    attr_accessor :title, :content, :notes, :number
+    attr_accessor :title, :content, :notes, :image_path, :slide_type
 
-    def initialize(title: "", content: [], notes: "", number: nil)
+    def initialize(title: "", content: [], notes: "", image_path: nil, slide_type: :content)
       @title = title
       @content = content.is_a?(Array) ? content : [content].compact
       @notes = notes
-      @number = number
+      @image_path = image_path
+      @slide_type = slide_type # :content, :image, or :mixed
     end
 
     def add_content(item)
@@ -28,7 +29,8 @@ module ISpeaker
         title: @title,
         content: @content,
         notes: @notes,
-        number: @number,
+        image_path: @image_path,
+        slide_type: @slide_type,
       }
     end
 
@@ -42,7 +44,7 @@ module ISpeaker
     def display_summary
       content_preview = @content.first(2).join(", ")
       content_preview + "..." if @content.length > 2
-      "#{@number}. #{@title} (#{@content.length} points)"
+      "#{@title} (#{@content.length} points)"
     end
 
     def empty?
@@ -50,7 +52,32 @@ module ISpeaker
     end
 
     def complete?
-      !@title.strip.empty? && !@content.empty?
+      case @slide_type.to_s
+      when "image"
+        !@title.strip.empty? && !@image_path.nil? && File.exist?(@image_path.to_s)
+      when "mixed"
+        !@title.strip.empty? && (!@content.empty? || (!@image_path.nil? && File.exist?(@image_path.to_s)))
+      else
+        !@title.strip.empty? && !@content.empty?
+      end
+    end
+
+    def image_slide?
+      %w[image mixed].include?(@slide_type.to_s)
+    end
+
+    def has_valid_image?
+      !@image_path.nil? && File.exist?(@image_path.to_s)
+    end
+
+    def set_image(path)
+      if File.exist?(path.to_s)
+        @image_path = path
+        @slide_type = @content.empty? ? :image : :mixed
+        true
+      else
+        false
+      end
     end
   end
 end

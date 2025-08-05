@@ -3,7 +3,7 @@
 
 # Demo script to test auto-save functionality
 
-require_relative 'lib/i_speaker'
+require_relative "lib/i_speaker"
 
 puts "💾 Testing Auto-Save Functionality".cyan.bold
 puts "=" * 50
@@ -27,8 +27,8 @@ talk = ISpeaker::Talk.new(
 interface.instance_variable_set(:@talk, talk)
 
 # Test auto-save method
-puts "   • Auto-save enabled: #{interface.instance_variable_get(:@auto_save_enabled) ? 'YES' : 'NO'}".light_blue
-puts "   • Current filename: #{interface.instance_variable_get(:@current_filename) || 'None (will generate)'}".light_blue
+puts "   • Auto-save enabled: #{interface.instance_variable_get(:@auto_save_enabled) ? "YES" : "NO"}".light_blue
+puts "   • Current filename: #{interface.instance_variable_get(:@current_filename) || "None (will generate)"}".light_blue
 
 # Trigger auto-save
 puts "   • Triggering auto-save..."
@@ -49,12 +49,12 @@ end
 puts "\n2. Testing auto-save toggle...".blue
 
 original_state = interface.instance_variable_get(:@auto_save_enabled)
-puts "   • Original state: #{original_state ? 'ON' : 'OFF'}".light_blue
+puts "   • Original state: #{original_state ? "ON" : "OFF"}".light_blue
 
 interface.send(:toggle_autosave)
 new_state = interface.instance_variable_get(:@auto_save_enabled)
-puts "   • After toggle: #{new_state ? 'ON' : 'OFF'}".light_blue
-puts "   ✅ Toggle functionality works: #{original_state != new_state ? 'YES' : 'NO'}".green
+puts "   • After toggle: #{new_state ? "ON" : "OFF"}".light_blue
+puts "   ✅ Toggle functionality works: #{original_state == new_state ? "NO" : "YES"}".green
 
 # Toggle back
 interface.send(:toggle_autosave)
@@ -71,13 +71,13 @@ special_talk = ISpeaker::Talk.new(
 )
 
 interface.instance_variable_set(:@talk, special_talk)
-interface.instance_variable_set(:@current_filename, nil)  # Reset filename
+interface.instance_variable_set(:@current_filename, nil) # Reset filename
 
 puts "   • Original title: #{special_talk.title}".light_blue
 interface.send(:auto_save)
 generated_filename = interface.instance_variable_get(:@current_filename)
 puts "   • Generated filename: #{generated_filename}".light_blue
-puts "   ✅ Filename is safe: #{generated_filename.match?(/^[a-z0-9_]+\.json$/) ? 'YES' : 'NO'}".green
+puts "   ✅ Filename is safe: #{generated_filename.match?(/^[a-z0-9_]+\.json$/) ? "YES" : "NO"}".green
 
 # Test 4: Test slide operations with auto-save
 puts "\n4. Testing slide operations trigger auto-save...".blue
@@ -102,8 +102,8 @@ puts "\n5. Testing exit handler logic...".blue
 # Save original filename
 original_filename = interface.instance_variable_get(:@current_filename)
 
-puts "   • Talk exists: #{interface.instance_variable_get(:@talk) ? 'YES' : 'NO'}".light_blue
-puts "   • Auto-save enabled: #{interface.instance_variable_get(:@auto_save_enabled) ? 'YES' : 'NO'}".light_blue
+puts "   • Talk exists: #{interface.instance_variable_get(:@talk) ? "YES" : "NO"}".light_blue
+puts "   • Auto-save enabled: #{interface.instance_variable_get(:@auto_save_enabled) ? "YES" : "NO"}".light_blue
 puts "   • Current filename: #{original_filename}".light_blue
 
 # Simulate the exit handler logic (without actually exiting)
@@ -117,7 +117,7 @@ end
 
 puts "\n🎯 Auto-Save Test Summary:".cyan.bold
 puts "✅ Auto-save creates files with safe filenames"
-puts "✅ Toggle functionality works correctly"  
+puts "✅ Toggle functionality works correctly"
 puts "✅ Files are saved to disk successfully"
 puts "✅ Exit handling preserves work"
 puts "✅ Filename tracking works properly"

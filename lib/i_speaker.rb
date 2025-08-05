@@ -7,6 +7,8 @@ require_relative "i_speaker/talk"
 require_relative "i_speaker/slide"
 require_relative "i_speaker/ollama_client"
 require_relative "i_speaker/console_interface"
+require_relative "i_speaker/presentation_server"
+require_relative "i_speaker/notes_viewer"
 
 module ISpeaker
   class Error < StandardError; end

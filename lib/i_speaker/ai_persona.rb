@@ -34,10 +34,12 @@ module ISpeaker
 
     def self.slide_creation_prompt(talk_title, talk_description, slide_number, previous_slides = [])
       previous_context = if previous_slides.any?
-        "Previous slides in this talk:\n#{previous_slides.map.with_index(1) { |slide, i| "#{i}. #{slide[:title]}" }.join("\n")}\n\n"
-      else
-        ""
-      end
+                           "Previous slides in this talk:\n#{previous_slides.map.with_index(1) do |slide, i|
+                             "#{i}. #{slide[:title]}"
+                           end.join("\n")}\n\n"
+                         else
+                           ""
+                         end
 
       <<~PROMPT
         #{previous_context}I'm creating slide #{slide_number} for a talk titled "#{talk_title}".

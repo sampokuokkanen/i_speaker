@@ -1,0 +1,16 @@
+# Frozen String Literals Demo
+
+## Code Example:
+```ruby
+# frozen_string_literal: true
+
+def process_data(input)
+  header = "Processing: "
+  puts header + input
+end
+```
+
+## Result:
+✅ No string allocations for header
+✅ 34% performance improvement
+✅ Reduced GC pressure

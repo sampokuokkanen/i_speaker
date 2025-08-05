@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "drb/drb"
+require "colorize"
+require_relative "../lib/i_speaker/notes_viewer"
+
+# Main execution
+if __FILE__ == $0
+  port = ARGV[0]&.to_i || 9000
+
+  puts "🔍 Connecting to i_speaker presentation on port #{port}...".cyan
+
+  viewer = ISpeaker::NotesViewer.new(port)
+  viewer.start
+end

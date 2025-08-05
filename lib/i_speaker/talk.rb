@@ -15,12 +15,19 @@ module ISpeaker
     end
 
     def add_slide(slide = nil)
-      if slide.nil?
-        slide = Slide.new(number: @slides.length + 1)
-      else
-        slide.number = @slides.length + 1
-      end
+      slide = Slide.new if slide.nil?
       @slides << slide
+      slide
+    end
+
+    def insert_slide_at(position, slide = nil)
+      # Ensure position is within bounds
+      position = [[position, 0].max, @slides.length].min
+
+      slide = Slide.new if slide.nil?
+
+      @slides.insert(position, slide)
+      renumber_slides
       slide
     end
 
@@ -81,6 +88,31 @@ module ISpeaker
     end
 
     def save_to_file(filename)
+      # Check if file exists and has been modified externally
+      if File.exist?(filename)
+        begin
+          current_content = File.read(filename)
+          # Parse existing file to check if it's different from our current state
+          existing_data = JSON.parse(current_content, symbolize_names: true)
+          our_data = to_hash
+          
+          # Simple comparison - if the slide count or basic structure differs, warn about conflict
+          if existing_data[:slides]&.length != our_data[:slides]&.length ||
+             existing_data[:title] != our_data[:title] ||
+             existing_data[:description] != our_data[:description]
+            
+            # Create backup of current file
+            backup_filename = "#{filename}.backup_#{Time.now.strftime('%Y%m%d_%H%M%S')}"
+            File.write(backup_filename, current_content)
+            puts "\n⚠️  File conflict detected! Created backup: #{backup_filename}".yellow
+            puts "External changes detected in #{filename}. Proceeding with save...".yellow
+          end
+        rescue JSON::ParserError
+          # If we can't parse the existing file, just proceed with save
+          puts "\n⚠️  Existing file appears corrupted. Overwriting...".yellow
+        end
+      end
+      
       File.write(filename, JSON.pretty_generate(to_hash))
     end
 
@@ -100,7 +132,8 @@ module ISpeaker
           title: slide_data[:title],
           content: slide_data[:content],
           notes: slide_data[:notes],
-          number: slide_data[:number],
+          image_path: slide_data[:image_path],
+          slide_type: slide_data[:slide_type] || :content
         )
         talk.slides << slide
       end
@@ -131,7 +164,7 @@ module ISpeaker
     end
 
     def renumber_slides
-      @slides.each_with_index { |slide, index| slide.number = index + 1 }
+      # No longer needed - slide numbers are determined by position
     end
   end
 end

@@ -3,7 +3,7 @@
 
 # Demo script showing the complete i_speaker workflow with Ollama AI integration
 
-require_relative 'lib/i_speaker'
+require_relative "lib/i_speaker"
 
 puts "🎤 i_speaker Complete Workflow Demo".cyan.bold
 puts "=" * 50
@@ -33,7 +33,7 @@ puts talk.summary.light_blue
 # Test AI integration by creating some slides
 if interface.instance_variable_get(:@ai_available)
   puts "\n🤖 Using AI to create slides...".yellow
-  
+
   slide_topics = [
     "Introduction to AI in Ruby Applications",
     "Setting up Ollama for Local AI",
@@ -41,48 +41,47 @@ if interface.instance_variable_get(:@ai_available)
     "Building AI-Powered Tools",
     "Best Practices and Security Considerations"
   ]
-  
+
   slide_topics.each_with_index do |topic, index|
     puts "\nCreating slide #{index + 1}: #{topic}".green
-    
+
     begin
-      prompt = "Create content for a slide titled '#{topic}' in a talk about '#{title}'. 
+      prompt = "Create content for a slide titled '#{topic}' in a talk about '#{title}'.
       Target audience: #{audience}
       Provide 3-4 key bullet points that cover the essential information.
       Keep it practical and focused on Ruby development.
-      
+
       Respond with just the bullet points, one per line, starting with '- '."
-      
+
       ai_response = interface.send(:ai_ask, prompt)
-      
+
       if ai_response
         # Parse the response to extract bullet points
         content = ai_response.split("\n")
-          .select { |line| line.strip.start_with?('-') }
-          .map { |line| line.strip.sub(/^-\s*/, '') }
-          .reject(&:empty?)
-        
+                             .select { |line| line.strip.start_with?("-") }
+                             .map { |line| line.strip.sub(/^-\s*/, "") }
+                             .reject(&:empty?)
+
         # Fallback content if AI doesn't provide proper format
         if content.empty?
           content = [
             "Key concept about #{topic.downcase}",
-            "Practical implementation details", 
+            "Practical implementation details",
             "Common challenges and solutions"
           ]
         end
-        
+
         slide = ISpeaker::Slide.new(
           title: topic,
           content: content,
           notes: "Explain #{topic.downcase} with practical examples and encourage audience questions."
         )
-        
+
         talk.add_slide(slide)
         puts "   ✅ Added slide: #{slide.title}".green
         content.each { |point| puts "      • #{point}".light_blue }
       end
-      
-    rescue => e
+    rescue StandardError => e
       puts "   ⚠️  AI error: #{e.message}".yellow
       # Add a basic slide as fallback
       slide = ISpeaker::Slide.new(
@@ -96,15 +95,15 @@ if interface.instance_variable_get(:@ai_available)
   end
 else
   puts "\n⚠️  AI not available, creating basic slides...".yellow
-  
+
   # Create basic slides without AI
   slide_topics = [
     "Introduction to AI in Ruby Applications",
-    "Local AI with Ollama", 
+    "Local AI with Ollama",
     "Implementation Examples",
     "Best Practices"
   ]
-  
+
   slide_topics.each do |topic|
     slide = ISpeaker::Slide.new(
       title: topic,
@@ -117,7 +116,7 @@ else
 end
 
 # Display the complete talk
-puts "\n" + "=" * 50
+puts "\n" + ("=" * 50)
 puts "\n📊 Complete Talk Structure:".cyan.bold
 puts talk.summary
 

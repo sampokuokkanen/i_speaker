@@ -3,8 +3,8 @@
 
 # Demo script to test AI-powered talk creation with Ollama
 
-require_relative 'lib/i_speaker'
-require_relative 'config/ruby_llm'
+require_relative "lib/i_speaker"
+require_relative "config/ruby_llm"
 
 puts "🎤 i_speaker AI Demo with Ollama".cyan
 puts "=" * 40
@@ -15,13 +15,13 @@ begin
   puts "✅ Ollama connection successful!".green
   puts "   Model: #{RubyLLM.configuration.default_model}".light_blue
   puts "   Response: #{response}".light_blue
-rescue => e
+rescue StandardError => e
   puts "❌ Could not connect to Ollama: #{e.message}".red
   puts "   Make sure Ollama is running on localhost:11434".yellow
   exit 1
 end
 
-puts "\n" + "=" * 40 + "\n"
+puts "\n" + ("=" * 40) + "\n"
 
 # Create a sample talk with AI assistance
 puts "Creating a sample talk about Ruby...".yellow
@@ -48,24 +48,24 @@ slides_to_create = [
 
 slides_to_create.each_with_index do |slide_title, index|
   puts "\nCreating slide #{index + 1}: #{slide_title}".green
-  
+
   prompt = ISpeaker::AIPersona.slide_creation_prompt(
     talk.title,
     talk.description,
     index + 1,
     talk.slides.map(&:to_hash)
   )
-  
+
   # Add specific context for this slide
   prompt += "\n\nCreate a slide specifically about: #{slide_title}"
   prompt += "\nProvide 3-4 key bullet points and speaker notes."
   prompt += "\nFormat the response as JSON with 'title', 'content' (array), and 'speaker_notes'."
-  
+
   begin
     response = RubyLLM.chat.ask(prompt)
-    
+
     # Try to parse JSON from response
-    require 'json'
+    require "json"
     json_match = response.match(/\{.*\}/m)
     if json_match
       slide_data = JSON.parse(json_match[0])
@@ -91,13 +91,13 @@ slides_to_create.each_with_index do |slide_title, index|
       talk.add_slide(slide)
       puts "   ⚠️  Added with default content".yellow
     end
-  rescue => e
+  rescue StandardError => e
     puts "   ❌ Error: #{e.message}".red
   end
 end
 
 # Display the complete talk
-puts "\n" + "=" * 40
+puts "\n" + ("=" * 40)
 puts "\n📊 Complete Talk Structure:".cyan.bold
 puts talk.summary
 

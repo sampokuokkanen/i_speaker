@@ -3,7 +3,7 @@
 
 # Demo script to showcase AI Fix Mode capabilities
 
-require_relative 'lib/i_speaker'
+require_relative "lib/i_speaker"
 
 puts "🔧 AI Fix Mode Demo - Expanding Presentations".cyan.bold
 puts "=" * 50
@@ -30,8 +30,9 @@ talk = ISpeaker::Talk.new(
 
 # Add initial slides (simulating what AI typically creates)
 initial_slides = [
-  { title: "Introduction to Ruby Performance", content: ["Why performance matters", "Common misconceptions", "Goals for today"] },
-  { title: "Profiling Tools", content: ["ruby-prof", "stackprof", "memory_profiler"] },
+  { title: "Introduction to Ruby Performance",
+    content: ["Why performance matters", "Common misconceptions", "Goals for today"] },
+  { title: "Profiling Tools", content: %w[ruby-prof stackprof memory_profiler] },
   { title: "Memory Management", content: ["GC tuning", "Object allocation", "Memory leaks"] },
   { title: "Algorithm Optimization", content: ["Big O notation", "Data structure choices", "Benchmarking"] },
   { title: "Database Performance", content: ["N+1 queries", "Eager loading", "Query optimization"] },

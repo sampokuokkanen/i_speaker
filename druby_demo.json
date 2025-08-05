@@ -1,0 +1,45 @@
+{
+  "title": "DRuby Notes Demo",
+  "description": "Testing synchronized speaker notes",
+  "target_audience": "Developers",
+  "duration_minutes": 5,
+  "slides": [
+    {
+      "title": "Welcome to DRuby Demo",
+      "content": [
+        "This slide demonstrates synchronized speaker notes",
+        "Open another terminal and run: ruby exe/i_speaker_notes 9000",
+        "The notes will update automatically as you navigate"
+      ],
+      "notes": "Remember to mention that this is a live demo. Point out how the notes appear in the second terminal window. Emphasize that this is perfect for presentations where you need to keep notes hidden from the audience.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "How It Works",
+      "content": [
+        "DRuby (Distributed Ruby) enables communication between processes",
+        "Main presentation acts as server",
+        "Notes viewer connects as client",
+        "Real-time synchronization via observer pattern"
+      ],
+      "notes": "Technical details: DRuby creates a TCP connection between the main presentation and the notes viewer. The presentation server broadcasts slide changes to all connected clients. This is similar to how modern presentation software handles presenter displays.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Use Cases",
+      "content": [
+        "Conference presentations with projector + laptop screens",
+        "Remote presentations with screen sharing",
+        "Practice sessions with timer and notes",
+        "Team presentations with shared notes access"
+      ],
+      "notes": "This feature is especially useful for professional presentations. You can have your main slides on the projector while keeping detailed notes, timing information, and upcoming slide previews on your laptop screen.",
+      "image_path": null,
+      "slide_type": "content"
+    }
+  ],
+  "estimated_duration": 8,
+  "completion_status": "3/3 slides completed"
+}

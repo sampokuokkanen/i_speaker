@@ -1,18 +1,18 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'net/http'
-require 'json'
-require 'uri'
+require "net/http"
+require "json"
+require "uri"
 
 class SimpleOllamaClient
-  def initialize(base_url = 'http://localhost:11434')
+  def initialize(base_url = "http://localhost:11434")
     @base_url = base_url
   end
 
-  def chat(model: 'llama3.2:latest', messages:)
+  def chat(messages:, model: "llama3.2:latest")
     uri = URI("#{@base_url}/api/chat")
-    
+
     request_body = {
       model: model,
       messages: messages,
@@ -21,30 +21,28 @@ class SimpleOllamaClient
 
     http = Net::HTTP.new(uri.host, uri.port)
     request = Net::HTTP::Post.new(uri)
-    request['Content-Type'] = 'application/json'
+    request["Content-Type"] = "application/json"
     request.body = request_body.to_json
 
     begin
       response = http.request(request)
-      if response.code == '200'
+      if response.code == "200"
         JSON.parse(response.body)
       else
         { error: "HTTP #{response.code}: #{response.body}" }
       end
-    rescue => e
+    rescue StandardError => e
       { error: e.message }
     end
   end
 
-  def ask(prompt, model: 'llama3.2:latest')
-    messages = [{ role: 'user', content: prompt }]
+  def ask(prompt, model: "llama3.2:latest")
+    messages = [{ role: "user", content: prompt }]
     response = chat(model: model, messages: messages)
-    
-    if response.key?('error')
-      raise "Ollama error: #{response['error']}"
-    else
-      response.dig('message', 'content') || 'No response'
-    end
+
+    raise "Ollama error: #{response["error"]}" if response.key?("error")
+
+    response.dig("message", "content") || "No response"
   end
 end
 
@@ -55,7 +53,7 @@ ollama = SimpleOllamaClient.new
 begin
   response = ollama.ask("Say hello in one word")
   puts "✅ Ollama is working! Response: #{response}"
-  
+
   # Test a more complex prompt
   prompt = <<~PROMPT
     You're helping create a presentation titled "Ruby Programming Basics".
@@ -79,7 +77,6 @@ begin
   puts "\nTesting complex prompt..."
   complex_response = ollama.ask(prompt)
   puts "Response: #{complex_response[0..200]}..."
-
-rescue => e
+rescue StandardError => e
   puts "❌ Error: #{e.message}"
 end

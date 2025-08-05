@@ -13,6 +13,6 @@ gem "minitest", "~> 5.16"
 gem "rubocop", "~> 1.21"
 
 # Development and test dependencies
+gem "colorize", "~> 0.8"
 gem "ruby_llm", "~> 1.3"
 gem "tty-prompt", "~> 0.23"
-gem "colorize", "~> 0.8"

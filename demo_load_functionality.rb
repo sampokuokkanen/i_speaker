@@ -3,7 +3,7 @@
 
 # Demo script to test the improved load functionality
 
-require_relative 'lib/i_speaker'
+require_relative "lib/i_speaker"
 
 puts "🔄 Testing improved load talk functionality".cyan.bold
 puts "=" * 50
@@ -21,12 +21,12 @@ talks = [
     duration: 20,
     slides: [
       { title: "Welcome to Ruby", content: ["What is Ruby?", "Why learn Ruby?", "Ruby's philosophy"] },
-      { title: "Basic Syntax", content: ["Variables", "Methods", "Classes"] },
+      { title: "Basic Syntax", content: %w[Variables Methods Classes] },
       { title: "Ruby Features", content: ["Dynamic typing", "Object-oriented", "Expressive syntax"] }
     ]
   },
   {
-    filename: "sample_advanced_rails.json", 
+    filename: "sample_advanced_rails.json",
     title: "Advanced Rails Techniques",
     description: "Deep dive into advanced Ruby on Rails patterns and best practices",
     target_audience: "Experienced Rails developers",
@@ -101,18 +101,16 @@ puts "\n📋 Preview of what you'll see:".blue
 puts "Available talk files:"
 
 Dir.glob("*.json").sort.each do |filename|
-  begin
-    data = JSON.parse(File.read(filename), symbolize_names: true)
-    title = data[:title] || "Untitled"
-    slide_count = data[:slides]&.length || 0
-    duration = data[:duration_minutes] || "Unknown"
-    modified_time = File.mtime(filename).strftime("%Y-%m-%d %H:%M")
-    
-    puts "   #{filename} - \"#{title}\" (#{slide_count} slides, #{duration}min) [#{modified_time}]".light_blue
-  rescue => e
-    modified_time = File.mtime(filename).strftime("%Y-%m-%d %H:%M")
-    puts "   #{filename} - ⚠️  Invalid JSON format [#{modified_time}]".yellow
-  end
+  data = JSON.parse(File.read(filename), symbolize_names: true)
+  title = data[:title] || "Untitled"
+  slide_count = data[:slides]&.length || 0
+  duration = data[:duration_minutes] || "Unknown"
+  modified_time = File.mtime(filename).strftime("%Y-%m-%d %H:%M")
+
+  puts "   #{filename} - \"#{title}\" (#{slide_count} slides, #{duration}min) [#{modified_time}]".light_blue
+rescue StandardError
+  modified_time = File.mtime(filename).strftime("%Y-%m-%d %H:%M")
+  puts "   #{filename} - ⚠️  Invalid JSON format [#{modified_time}]".yellow
 end
 
 puts "\n🎉 Improved load functionality is ready!".green.bold

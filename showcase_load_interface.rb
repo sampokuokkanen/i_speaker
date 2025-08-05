@@ -3,7 +3,7 @@
 
 # Showcase script demonstrating the improved load interface
 
-require_relative 'lib/i_speaker'
+require_relative "lib/i_speaker"
 
 puts "🎯 i_speaker Load Interface Showcase".cyan.bold
 puts "=" * 50
@@ -22,18 +22,16 @@ else
   puts
 
   json_files.each_with_index do |filename, index|
-    begin
-      data = JSON.parse(File.read(filename), symbolize_names: true)
-      title = data[:title] || "Untitled"
-      slide_count = data[:slides]&.length || 0
-      duration = data[:duration_minutes] || "Unknown"
-      modified_time = File.mtime(filename).strftime("%Y-%m-%d %H:%M")
-      
-      puts "#{index + 1}. #{filename} - \"#{title}\" (#{slide_count} slides, #{duration}min) [#{modified_time}]".light_blue
-    rescue
-      modified_time = File.mtime(filename).strftime("%Y-%m-%d %H:%M")
-      puts "#{index + 1}. #{filename} - ⚠️  Invalid JSON format [#{modified_time}]".yellow
-    end
+    data = JSON.parse(File.read(filename), symbolize_names: true)
+    title = data[:title] || "Untitled"
+    slide_count = data[:slides]&.length || 0
+    duration = data[:duration_minutes] || "Unknown"
+    modified_time = File.mtime(filename).strftime("%Y-%m-%d %H:%M")
+
+    puts "#{index + 1}. #{filename} - \"#{title}\" (#{slide_count} slides, #{duration}min) [#{modified_time}]".light_blue
+  rescue StandardError
+    modified_time = File.mtime(filename).strftime("%Y-%m-%d %H:%M")
+    puts "#{index + 1}. #{filename} - ⚠️  Invalid JSON format [#{modified_time}]".yellow
   end
 
   puts "#{json_files.length + 1}. 📝 Enter filename manually".cyan
