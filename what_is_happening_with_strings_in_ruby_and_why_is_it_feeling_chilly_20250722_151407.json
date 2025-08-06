@@ -314,11 +314,12 @@
     {
       "title": "Real-World Impact: A Case Study",
       "content": [
-        "Lobsters benchmark: Ruby with frozen literals was ~5% faster than without, showing tangible GC savings.",
-        "Microbenchmark: looping with string concatenation ran ~22% faster with `# frozen_string_literal: true` (Ruby 2.7).",
-        "Ruby 3.4-dev test: similar code was ~34% faster when literals were frozen.",
-        "GitHub case: swapping `Symbol#to_s` to `Symbol#name` (internally) cut string allocations by ~5%, hinting at further chilled-string gains.",
-        "These examples demonstrate that immutable literals can improve performance in real workloads."
+        "**Lobsters.rs (2019, Ruby 2.6)**: ~5% faster with frozen literals",
+        "**String concatenation loop (Ruby 2.7, 2020)**: 22% performance gain",
+        "**Ruby 3.4-dev (2024)**: 34% faster with frozen string literals",
+        "**GitHub.com (Ruby 3.3, 2024)**: 5% fewer allocations using Symbol#name",
+        "",
+        "💡 **Key insight**: Even 5% matters at scale!"
       ],
       "notes": "Case studies: see actual speed-ups from frozen literals, and note that even large systems like GitHub see ~5% fewer allocations by changing symbol-to-string behavior.",
       "image_path": null,
