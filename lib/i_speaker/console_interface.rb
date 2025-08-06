@@ -69,12 +69,7 @@ module ISpeaker
     end
 
     def handle_exit
-      if @talk
-        puts "\n\n💾 Saving your work before exit...".blue
-        auto_save
-        puts "\n✅ Work saved successfully!".green
-      end
-      puts "Goodbye! 👋".green
+      puts "\nGoodbye! 👋".green
       exit(0)
     end
 
@@ -200,13 +195,13 @@ module ISpeaker
         safe_title = @talk.title.downcase.gsub(/[^a-z0-9]/, "_").gsub(/_+/, "_").chomp("_")
         safe_title = "untitled" if safe_title.empty?
         @current_filename = "#{safe_title}_#{timestamp}.json"
-        puts "💾 Auto-saving as: #{@current_filename}".light_blue
+        # Don't print auto-save message for performance
       end
 
       begin
         @talk.save_to_file(@current_filename)
-        save_commentary_cache # Save commentary cache alongside talk
-        print "💾" # Simple save indicator
+        # Skip commentary cache save for performance
+        # save_commentary_cache
       rescue StandardError => e
         puts "\n⚠️  Auto-save failed: #{e.message}".yellow
       end
@@ -724,7 +719,7 @@ module ISpeaker
       puts "\n🎬 Starting presentation#{" with AI commentary" if use_commentary}...".cyan
       puts "Navigation: SPACE/→ = Next | ← = Previous | ENTER = IRB Demo | C = Commentary | P = Pause/Resume | ESC = Exit".light_black
       puts "Tip: Images will prompt ENTER to view | IRB slides launch interactive Ruby | Timer shows elapsed time".light_black
-      sleep(2)
+      # Removed sleep for faster start
 
       loop do
         # Preload commentary for nearby slides
@@ -768,7 +763,6 @@ module ISpeaker
           if @ai_available
             use_commentary = !use_commentary
             puts "\n🎭 Commentary #{use_commentary ? "ON" : "OFF"}".yellow
-            sleep(1)
           end
         when :p
           # Toggle pause
@@ -853,8 +847,6 @@ module ISpeaker
 
       puts "⏰ Auto-starting presentation...".light_blue unless key_pressed
 
-      sleep(1)
-
       begin
         loop do
           # Preload commentary for nearby slides
@@ -922,7 +914,6 @@ module ISpeaker
             if @ai_available
               use_commentary = !use_commentary
               puts "\n🎭 Commentary #{use_commentary ? "ON" : "OFF"}".yellow
-              sleep(1)
             end
           when :p
             # Toggle pause

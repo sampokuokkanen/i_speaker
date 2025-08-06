@@ -113,7 +113,9 @@ module ISpeaker
         end
       end
       
-      File.write(filename, JSON.pretty_generate(to_hash))
+      # Use fast generation in production, pretty in development
+      json_content = ENV['RACK_ENV'] == 'production' ? JSON.generate(to_hash) : JSON.pretty_generate(to_hash)
+      File.write(filename, json_content)
     end
 
     def self.load_from_file(filename)
