@@ -8,28 +8,23 @@
       "title": "Welcome to RubyConf Taiwan! 🇹🇼",
       "content": [
         "Hello Ruby developers of Taiwan! 你好！",
-        "Taiwan's tech scene: From semiconductor leadership to Ruby innovation",
-        "Why Taiwan matters in the Ruby ecosystem:",
-        "• Strong open-source community",
-        "• Active Ruby developers and companies",
-        "• Bridge between Eastern and Western Ruby communities",
-        "Today's journey: How Ruby makes decisions (spoiler: very carefully!)"
+        "Taiwan's tech scene: From semiconductor leadership to Ruby innovation"
       ],
-      "notes": "Acknowledge the local audience and Taiwan's importance in tech. Set the stage for discussing Ruby's cautious decision-making process.",
+      "notes": "Warm welcome to the local audience and acknowledge Taiwan's tech leadership.",
       "image_path": null,
       "slide_type": "content"
     },
     {
-      "title": "Ruby Demo: Let's Try Chilled Strings! 🧊",
+      "title": "Why Taiwan Matters in Ruby 💎",
       "content": [
-        "Time to see chilled strings in action! 🧊",
+        "Why Taiwan matters in the Ruby ecosystem:",
+        "• Strong open-source community",
+        "• Active Ruby developers and companies",
+        "• Bridge between Eastern and Western Ruby communities",
         "",
-        "🎯 **Press ENTER to run live Ruby demo!**",
-        "",
-        "We'll create a string, check if it's frozen,",
-        "try to mutate it, and see the warning!"
+        "Today's journey: How Ruby makes decisions (spoiler: very carefully!)"
       ],
-      "notes": "DEMO SLIDE: Press ENTER to execute the Ruby code! This will show chilled strings behavior with real Ruby execution.",
+      "notes": "Set the stage for discussing Ruby's cautious decision-making process.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -66,10 +61,9 @@
       "slide_type": "content"
     },
     {
-      "title": "The String Performance Problem in Ruby",
+      "title": "The String Performance Problem (?) in Ruby",
       "content": [
-        "Ruby's mutable strings: convenient but costly",
-        "20-30% of Ruby execution time spent in garbage collection",
+        "Ruby's mutable strings: convenient and fun, but costly",
         "String allocations are a major contributor to GC pressure",
         "The solution: Immutability through frozen and chilled strings"
       ],
@@ -88,7 +82,7 @@
       "title": "Evil Martians: Product Development for the Web 👽",
       "content": [
         "Design + Development + Growth consultancy",
-        "• Open Source contributors (Stimulus, AnyCable, PostCSS)",
+        "• Open Source contributors (AnyCable, PostCSS)",
         "• Ruby/Rails experts since 2005",
         "• Global team: SF, NYC, Barcelona, Lisbon, Japan",
         "Japan office established: May 2022 🇯🇵",
@@ -106,15 +100,39 @@
       "slide_type": "mixed"
     },
     {
-      "title": "The Evolution of Frozen Strings in Ruby",
+      "title": "Ruby Pre-2.3: The Manual Era",
       "content": [
-        "Pre-2.3: Strings always mutable, developers used ''.freeze for constants",
-        "Ruby 2.1: Optimized .freeze to deduplicate identical literals, reducing memory usage",
-        "Ruby 2.3: Introduced # frozen_string_literal: true pragma for opt-in immutability",
-        "Ruby 3.0 plan: Default frozen literals postponed due to compatibility concerns",
+        "Strings always mutable by default",
+        "Developers used ''.freeze for constants",
+        "Memory issues: every string literal created a new object"
+      ],
+      "notes": "Set the stage - before optimizations, every string was a separate object in memory.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Ruby 2.1: The Deduplication Breakthrough",
+      "content": [
+        "Major optimization: .freeze now deduplicates identical literals",
+        "Same frozen strings share memory locations",
+        "Dramatic memory usage reduction",
+        "",
+        "Example:",
+        "• Before: Each 'hello'.freeze = new object",
+        "• After: All 'hello'.freeze = same object"
+      ],
+      "notes": "Ruby 2.1 was the first major step toward efficient string handling. This optimization made .freeze actually useful for performance.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Ruby 2.3 and Beyond",
+      "content": [
+        "Ruby 2.3: Introduced # frozen_string_literal: true pragma",
+        "Ruby 3.0 plan: Default frozen literals postponed due to compatibility",
         "Ruby 3.3+: Introduction of 'chilled strings' as transition mechanism"
       ],
-      "notes": "Present the history as a clear timeline. Emphasize the progression from manual freezing to pragma to the current chilled string approach. This creates a coherent narrative instead of fragmented information.",
+      "notes": "Present the timeline progression from manual freezing to pragma to the current chilled string approach.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -132,16 +150,56 @@
       "slide_type": "content"
     },
     {
-      "title": "Chilled Strings: The Technical Deep Dive",
+      "title": "Chilled Strings: What They Are",
       "content": [
         "Ruby 3.3 introduces the putchilledstring instruction",
         "Chilled strings: appear frozen but can 'thaw' with warnings",
-        "Key insight: Mixed benchmark results in real applications",
-        "# Technical implementation (from Ruby Issue #20205)\n# putchilledstring creates strings with special flags\n# STR_CHILLED flag marks the string as 'thawed-on-write'\n# .frozen? initially returns true (controversial decision!)\n# First mutation: warning + string becomes mutable\n# Performance impact: minimal overhead (< 1%)",
-        "Reality: Performance gains are often marginal (5-30%)",
-        "The real goal: Gradual migration to immutability"
+        "Key insight: Mixed benchmark results in real applications"
       ],
-      "notes": "Present the technical details in a clear, sequential manner. Focus on the behavior rather than low-level implementation details. Use the example to make the concept concrete.",
+      "notes": "Introduce the basic concept of chilled strings before diving into implementation details.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Chilled Strings: Technical Implementation",
+      "content": [
+        "Technical implementation (from Ruby Issue #20205):",
+        "• putchilledstring creates strings with special flags",
+        "• STR_CHILLED flag marks the string as 'thawed-on-write'",
+        "• .frozen? returns **false** (changed after RubyKaigi!)",
+        "• First mutation: warning + string becomes mutable",
+        "• Performance impact: minimal overhead (< 1%)"
+      ],
+      "notes": "Present the technical implementation details. Note that frozen? behavior was changed from the original plan.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Chilled Strings: Performance Reality",
+      "content": [
+        "Reality: Performance gains are often marginal (5-30%)",
+        "The real goal: Gradual migration to immutability",
+        "",
+        "Not about dramatic speedups – about preparing for the future"
+      ],
+      "notes": "Focus on the behavior rather than low-level implementation details. Use the example to make the concept concrete.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Why frozen? Returns False: The RubyKaigi Decision",
+      "content": [
+        "**Original plan**: `'hello'.frozen?` → `true` for chilled strings",
+        "**Problem**: Caused confusion and potential bugs",
+        "**The issue**: `str.dup if str.frozen?` pattern breaks",
+        "",
+        "**After RubyKaigi discussions with Matz**:",
+        "• Changed to return `false` to avoid false positives",
+        "• Better to have explicit warnings than silent corruption",
+        "",
+        "Source: Ruby Issue #20205, Jean Boussier's experiments"
+      ],
+      "notes": "Explain the decision-making process behind the frozen? behavior change. This addresses community confusion and shows Ruby's responsiveness to feedback.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -164,20 +222,21 @@
         "Ruby 2.3: Introduced # frozen_string_literal: true pragma",
         "Ruby 2.7+: Added deprecation warnings for mutating literals",
         "Ruby 3.3: Implemented chilled strings (R0 transition phase)",
-        "Future (Ruby 4.0): Planned default frozen literals (R2)"
+        "Future (Ruby 4.1+): Planned default frozen literals (R2)"
       ],
       "notes": "Present this as a clear timeline visualization. Emphasize that this has been a decade-long journey showing Ruby's commitment to both performance and backward compatibility. This replaces the repetitive historical content across multiple slides.",
       "image_path": null,
       "slide_type": "content"
     },
     {
-      "title": "The State of Strings in Ruby (Part 2)",
+      "title": "The State of Strings in Ruby 3.3",
       "content": [
-        "Starting with Ruby 3.3 (planned R0), strings in files without a `# frozen_string_literal` comment use the new `putchilledstring` instruction.",
-        "The `putchilledstring` opcode marks the string as frozen (via STR_CHILLED and FL_FREEZE flags), so `String#frozen?` returns true at first.",
-        "On the first mutating operation (e.g. `<<`), the chilled string loses its frozen status and emits a warning instead of raising a `FrozenError`."
+        "Starting with Ruby 3.3 (R0), strings without `# frozen_string_literal` use `putchilledstring`",
+        "The `putchilledstring` opcode creates chilled strings",
+        "**Key behavior**: `String#frozen?` returns **false** (changed from original plan!)",
+        "On first mutating operation: warning + string becomes mutable"
       ],
-      "notes": "In Ruby 3.3 (core discussion calls this R0), the behavior is: no pragma -> string is chilled. It's frozen but thaws on mutation with a warning. Files with explicit comments (true/false) behave unchanged.",
+      "notes": "In Ruby 3.3, chilled strings return false for frozen? - this was changed from the original plan after community feedback and RubyKaigi discussions.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -246,43 +305,85 @@
       "slide_type": "content"
     },
     {
-      "title": "Impact on Everyday Rubyists: Performance Considerations",
+      "title": "Performance Benefits",
       "content": [
-        "Freezing literals cuts object allocations: identical constants can be shared, reducing GC work.",
-        "Benchmarks show gains: one example found a 22% speedup concatenating strings 1M times with frozen literals in Ruby 2.7.",
-        "In Ruby 3.4-dev, a similar test was ~34% faster with frozen literals.",
-        "Rails has reported significant memory savings from frozen literals; since Ruby often spends ~20-30% time in GC, these savings yield CPU speedups.",
-        "Ruby 3.3 also optimized `String.dup`, so developers can now use `.dup` (for mutability) without a performance penalty."
+        "Freezing literals cuts object allocations",
+        "Identical constants can be shared, reducing GC work",
+        "",
+        "Benchmarks show gains:",
+        "• Ruby 2.7: 22% speedup concatenating 1M strings",
+        "• Ruby 3.4-dev: 34% faster with frozen literals"
       ],
-      "notes": "Performance recap: frozen literals mean fewer allocations and less GC. We saw actual numbers from the community, and note that Ruby 3.3 made `.dup` as fast as `+`.",
+      "notes": "Performance recap: frozen literals mean fewer allocations and less GC pressure.",
       "image_path": null,
       "slide_type": "content"
     },
     {
-      "title": "Ruby's Cautious Decision-Making: A Decade in the Making",
+      "title": "Real-World Performance Impact",
+      "content": [
+        "Rails has reported significant memory savings",
+        "Ruby often spends ~20-30% time in GC, so savings = speedups",
+        "",
+        "Ruby 3.3 optimized `String.dup`:",
+        "• Developers can now use `.dup` without performance penalty",
+        "• .dup is now as fast as + for creating mutable copies"
+      ],
+      "notes": "Ruby 3.3 made .dup as fast as +, removing the performance penalty for explicit mutability.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Ruby's Cautious Decision-Making",
       "content": [
         "The Ruby Way: Compatibility above all else",
         "• 10+ years of discussion for this feature",
         "• Multiple RFCs, endless bikeshedding, community input",
-        "• 'Better safe than sorry' philosophy",
-        "Why so slow? Ruby values backward compatibility over speed",
-        "# The famous Ruby decision timeline\n# 2013: First discussions about frozen strings\n# 2016: Magic comment introduced\n# 2024: Chilled strings finally implemented\n# 2025+: Still debating R1/R2 phases",
-        "Source: Ruby Issue #20205 - https://bugs.ruby-lang.org/issues/20205"
+        "• 'Better safe than sorry' philosophy"
       ],
-      "notes": "Emphasize Ruby's extremely cautious approach. This is a culture that values not breaking existing code over rapid innovation. Perfect example of Ruby's philosophy.",
+      "notes": "Emphasize Ruby's philosophy of prioritizing compatibility.",
       "image_path": null,
       "slide_type": "content"
     },
     {
-      "title": "Impact on Everyday Rubyists",
+      "title": "The Famous Ruby Timeline",
+      "content": [
+        "Why so slow? Ruby values backward compatibility over speed",
+        "",
+        "The famous Ruby decision timeline:",
+        "• 2013: First discussions about frozen strings",
+        "• 2016: Magic comment introduced",
+        "• 2024: Chilled strings finally implemented",
+        "• 2025+: Still debating R1/R2 phases",
+        "",
+        "Source: Ruby Issue #20205 - https://bugs.ruby-lang.org/issues/20205"
+      ],
+      "notes": "Perfect example of Ruby's philosophy - this is a culture that values not breaking existing code over rapid innovation.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Impact on Everyday Rubyists: The Basics",
       "content": [
         "Code with `# frozen_string_literal: true` is unaffected – literals were already frozen.",
-        "Without the pragma, literal strings will warn once on mutation and then become mutable (chilled behavior).",
-        "Common idioms (`dup if frozen?`) still work: a chilled string reports `.frozen? == true`, so `dup` yields a normal copy.",
-        "⚠️ GOTCHA: Chilled string as Hash key bug - if you use a chilled string as a hash key then mutate it, the hash gets corrupted (Ruby Issue #20205)",
-        "Workflow tip: Add `frozen_string_literal` to new files, and use `str.dup` or `+''` when you need a mutable copy (now equally fast)."
+        "Without the pragma, strings warn on mutation then become mutable",
+        "Common idioms (`dup if frozen?`) still work fine"
       ],
-      "notes": "Practical: if you already use `# frozen_string_literal: true`, nothing changes. If not, you’ll get a warning on first mutation. Continue to use `dup`/`+` for copies; they’re fast now. Watch out for the hash-key issue.",
+      "notes": "If you already use the magic comment, nothing changes. Otherwise you'll get warnings on mutation.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Impact on Everyday Rubyists: Watch Out!",
+      "content": [
+        "⚠️ GOTCHA: Chilled string as Hash key bug",
+        "If you use a chilled string as a hash key then mutate it, the hash gets corrupted",
+        "",
+        "Workflow tip: Add `frozen_string_literal` to new files",
+        "Use `str.dup` or `+''` when you need mutable copies (now equally fast)",
+        "",
+        "Source: Ruby Issue #20205"
+      ],
+      "notes": "Watch out for the hash-key corruption issue. Continue to use dup/+ for copies; they're fast now.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -726,5 +827,5 @@
     }
   ],
   "estimated_duration": 127,
-  "completion_status": "49/49 slides completed"
+  "completion_status": "58/58 slides completed"
 }
