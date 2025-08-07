@@ -15,7 +15,7 @@ ISpeaker::ConsoleInterface.new
 puts "\n📋 Testing load_talk method...".yellow
 
 # Mock the prompt to see what files would be shown
-json_files = Dir.glob("*.json").sort
+json_files = Dir.glob("*.json")
 
 puts "\nFound #{json_files.length} JSON files:".blue
 

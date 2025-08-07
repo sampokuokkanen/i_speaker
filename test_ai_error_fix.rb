@@ -26,7 +26,7 @@ class TestConsoleInterface < ISpeaker::ConsoleInterface
 
     begin
       # Simulate a JSON parsing error
-      raise JSON::ParserError.new("Test parsing error")
+      raise JSON::ParserError, "Test parsing error"
     rescue JSON::ParserError
       puts "\n❌ AI response wasn't in expected JSON format. Using simpler approach.".red
       puts "✅ Basic talk structure created successfully!".green
@@ -68,10 +68,10 @@ class TestConsoleInterface < ISpeaker::ConsoleInterface
       bracket_count = 0
       end_index = start_index
 
-      mixed_response[start_index..-1].each_char.with_index(start_index) do |char, i|
+      mixed_response[start_index..].each_char.with_index(start_index) do |char, i|
         bracket_count += 1 if char == "{"
         bracket_count -= 1 if char == "}"
-        if bracket_count == 0
+        if bracket_count.zero?
           end_index = i
           break
         end

@@ -141,8 +141,8 @@ module ISpeaker
         puts "   Get a free key at: https://serper.dev".light_blue
 
         # Only ask interactively if not in a test environment
-        if !(ENV["RAKE_TEST"] || $0.include?("rake") || ENV.fetch("CI",
-                                                                  nil)) && @prompt.yes?("Would you like to set up fact-checking with Google search? (requires Serper API key)")
+        if !(ENV["RAKE_TEST"] || $PROGRAM_NAME.include?("rake") || ENV.fetch("CI",
+                                                                             nil)) && @prompt.yes?("Would you like to set up fact-checking with Google search? (requires Serper API key)")
           setup_serper_key
         end
       end
@@ -224,7 +224,7 @@ module ISpeaker
     def create_or_load_talk
       options = [
         { name: "Create a new talk", value: :new },
-        { name: "Create complete talk with AI" + (@ai_available ? "" : " (unavailable)"), value: :ai_complete,
+        { name: "Create complete talk with AI#{" (unavailable)" unless @ai_available}", value: :ai_complete,
           disabled: !@ai_available },
         { name: "Load existing talk", value: :load },
         { name: "View sample talks", value: :samples },
@@ -350,7 +350,7 @@ module ISpeaker
         PROMPT
 
         response = ai_ask_with_spinner(questions_prompt, message: "Generating clarifying questions...")
-        questions = response.strip.split("\n").select { |line| line.match?(/^\d+\./) }
+        questions = response.strip.split("\n").grep(/^\d+\./)
 
         answers = {}
         questions.each do |question|
@@ -407,10 +407,10 @@ module ISpeaker
           bracket_count = 0
           end_index = start_index
 
-          json_response[start_index..-1].each_char.with_index(start_index) do |char, i|
+          json_response[start_index..].each_char.with_index(start_index) do |char, i|
             bracket_count += 1 if char == "{"
             bracket_count -= 1 if char == "}"
-            if bracket_count == 0
+            if bracket_count.zero?
               end_index = i
               break
             end
@@ -636,7 +636,7 @@ module ISpeaker
     def main_menu
       current_file_info = @current_filename ? " [#{@current_filename}]" : " [auto-saved]"
 
-      choice = @prompt.select("\n🎤 #{@talk.title}#{current_file_info}".bold + " - What would you like to do?", [
+      choice = @prompt.select("#{"\n🎤 #{@talk.title}#{current_file_info}".bold} - What would you like to do?", [
                                 { name: "View talk overview", value: :overview },
                                 { name: "🎬 Present slideshow", value: :retro_slideshow },
                                 { name: "📝 Present with notes server", value: :present_with_notes },
@@ -682,11 +682,11 @@ module ISpeaker
     end
 
     def show_talk_overview
-      puts "\n" + @talk.summary.light_blue
+      puts "\n#{@talk.summary.light_blue}"
 
       if @talk.slides.any? && @prompt.yes?("\nWould you like to see detailed slide content?")
         @talk.slides.each_with_index do |slide, index|
-          puts "\n" + ("─" * 50)
+          puts "\n#{"─" * 50}"
           puts "Slide #{index + 1}:".bold
           puts slide
         end
@@ -748,16 +748,14 @@ module ISpeaker
 
         case key
         when :left
-          current_slide_index -= 1 if current_slide_index > 0
+          current_slide_index -= 1 if current_slide_index.positive?
         when :right, :space
           current_slide_index += 1 if current_slide_index < @talk.slides.length - 1
           # Stay on last slide instead of exiting
         when :enter
           # Check if current slide is an IRB demo slide
           current_slide = @talk.slides[current_slide_index]
-          if is_irb_slide?(current_slide)
-            launch_irb_for_slide(current_slide)
-          end
+          launch_irb_for_slide(current_slide) if is_irb_slide?(current_slide)
         when :c
           # Toggle commentary
           if @ai_available
@@ -835,8 +833,8 @@ module ISpeaker
       key_pressed = false
 
       while (Time.now - start_wait) < 10 && !key_pressed
-        if STDIN.ready?
-          key = STDIN.getch
+        if $stdin.ready?
+          key = $stdin.getch
           if key == " "
             key_pressed = true
             puts "▶️  Starting presentation...".green
@@ -880,35 +878,33 @@ module ISpeaker
             key = nil
             start_time = Time.now
             while key.nil? && (Time.now - start_time) < 0.5
-              if STDIN.ready?
+              if $stdin.ready?
                 key = get_single_keypress
               else
                 sleep(0.1)
               end
             end
-            
+
             # If no key pressed but commentary might be ready, refresh display
             if key.nil? && use_commentary && @commentary_ready
               @commentary_ready = false
               next # Skip to next loop iteration to refresh display
             end
-            
+
             # If still no key, wait for actual keypress
             key ||= get_single_keypress
           end
 
           case key
           when :left
-            current_slide_index -= 1 if current_slide_index > 0
+            current_slide_index -= 1 if current_slide_index.positive?
           when :right, :space
             current_slide_index += 1 if current_slide_index < @talk.slides.length - 1
             # Stay on last slide instead of exiting
           when :enter
             # Check if current slide is an IRB demo slide
             current_slide = @talk.slides[current_slide_index]
-            if is_irb_slide?(current_slide)
-              launch_irb_for_slide(current_slide)
-            end
+            launch_irb_for_slide(current_slide) if is_irb_slide?(current_slide)
           when :c
             # Toggle commentary
             if @ai_available
@@ -931,7 +927,7 @@ module ISpeaker
             system("clear") || system("cls")
             break
           end
-          
+
           # Update notes server with current slide after any navigation
           current_slide = @talk.slides[current_slide_index]
           @drb_server.update_slide(current_slide_index, current_slide, @talk.slides.length, @talk.title)
@@ -979,32 +975,31 @@ module ISpeaker
       # Title - centered with size scaling
       title = slide.title
       title_size = terminal_width > 100 ? :large : :normal
-      
+
       # Use ASCII art for short, important titles
-      use_ascii_art = title_size == :large && title.length < 20 && 
-                     (title.include?("DEMO") || title.include?("WELCOME") || 
-                      title.include?("Q&A") || title.include?("THANK") ||
-                      index == 0 || index == @talk.slides.length - 1)
+      use_ascii_art = title_size == :large && title.length < 20 &&
+                      (title.include?("DEMO") || title.include?("WELCOME") ||
+                       title.include?("Q&A") || title.include?("THANK") ||
+                       index.zero? || index == @talk.slides.length - 1)
 
       if use_ascii_art
         # Display ASCII art title
         ascii_lines = ISpeaker::AsciiArt.center_large_text(title, terminal_width - 2, :green)
         ascii_lines.each do |line|
-          right_padding = [terminal_width - 2 - line.gsub(/\e\[[0-9;]*m/, '').length, 0].max
+          right_padding = [terminal_width - 2 - line.gsub(/\e\[[0-9;]*m/, "").length, 0].max
           puts "║#{line}#{" " * right_padding}║"
         end
       else
         # Regular title display
-        if title_size == :large && title.length < 50
-          title_display = title.upcase
-          title_style = title_display.bold.green
-        else
-          title_display = title
-          title_style = title_display.bold.green
-        end
+        title_display = if title_size == :large && title.length < 50
+                          title.upcase
+                        else
+                          title
+                        end
+        title_style = title_display.bold.green
 
         # Handle long titles
-        title_display = title_display[0...(terminal_width - 9)] + "..." if title_display.length > terminal_width - 6
+        title_display = "#{title_display[0...(terminal_width - 9)]}..." if title_display.length > terminal_width - 6
 
         title_padding = [(terminal_width - 2 - title_display.length) / 2, 0].max
         right_padding = [terminal_width - 2 - title_padding - title_display.length, 0].max
@@ -1052,13 +1047,13 @@ module ISpeaker
       # Calculate total content height including code blocks
       total_content_lines = 0
       content_items.each do |item|
-        if item[:type] == :code_block
-          total_content_lines += item[:content].split("\n").length
-        else
-          total_content_lines += 1
-        end
+        total_content_lines += if item[:type] == :code_block
+                                 item[:content].split("\n").length
+                               else
+                                 1
+                               end
       end
-      
+
       # Calculate content area with spacing between items
       content_height = content_items.empty? ? 0 : (total_content_lines + (content_items.length - 1))
       remaining_lines = available_height - content_height
@@ -1073,11 +1068,11 @@ module ISpeaker
         if item[:type] == :code_block
           # Display code block as a unit, centered as a whole
           code_lines = item[:content].split("\n")
-          
+
           # Find the widest line for centering the entire block
           max_visible_width = code_lines.map { |line| strip_ansi_codes(line).length }.max || 0
           block_padding = [(terminal_width - 2 - max_visible_width) / 2, 0].max
-          
+
           code_lines.each do |line|
             visible_length = strip_ansi_codes(line).length
             # Left-align within the code block, but center the block itself
@@ -1089,24 +1084,23 @@ module ISpeaker
           # Regular text content - center normally
           line = item[:content]
           visible_length = strip_ansi_codes(line).length
-          
+
           if visible_length > terminal_width - 4
-            line = truncate_with_ansi(line, terminal_width - 7) + "..."
+            line = "#{truncate_with_ansi(line, terminal_width - 7)}..."
             visible_length = strip_ansi_codes(line).length
           end
 
           line_padding = [(terminal_width - 2 - visible_length) / 2, 0].max
           right_padding = [terminal_width - 2 - line_padding - visible_length, 0].max
           # Make bullet points more prominent
-          display_line = line
-          if line.strip.start_with?("•")
-            display_line = line.gsub(/^(\s*)•/, '\1▸').bold.light_white
-          elsif line.strip.start_with?("▸")
-            display_line = line.bold.light_white
-          else
-            display_line = line.light_white
-          end
-          
+          display_line = if line.strip.start_with?("•")
+                           line.gsub(/^(\s*)•/, '\1▸').bold.light_white
+                         elsif line.strip.start_with?("▸")
+                           line.bold.light_white
+                         else
+                           line.light_white
+                         end
+
           puts "║#{" " * line_padding}#{display_line}#{" " * right_padding}║"
         end
 
@@ -1121,18 +1115,18 @@ module ISpeaker
       puts "╚#{"═" * (terminal_width - 2)}╝"
 
       # AI Commentary section
-      if show_commentary && @ai_available
-        commentary = generate_slide_commentary(slide)
-        if commentary && !commentary.strip.empty?
-          puts "\n┌─ 🎭 AI COMEDY CORNER ─────────────────────────────────────────────────┐".yellow
-          commentary_lines = wrap_text(commentary, terminal_width - 6)
-          commentary_lines.each do |line|
-            padded_line = line.ljust(terminal_width - 6)
-            puts "│ #{padded_line.light_yellow} │".yellow
-          end
-          puts "└───────────────────────────────────────────────────────────────────────┘".yellow
-        end
+      return unless show_commentary && @ai_available
+
+      commentary = generate_slide_commentary(slide)
+      return unless commentary && !commentary.strip.empty?
+
+      puts "\n┌─ 🎭 AI COMEDY CORNER ─────────────────────────────────────────────────┐".yellow
+      commentary_lines = wrap_text(commentary, terminal_width - 6)
+      commentary_lines.each do |line|
+        padded_line = line.ljust(terminal_width - 6)
+        puts "│ #{padded_line.light_yellow} │".yellow
       end
+      puts "└───────────────────────────────────────────────────────────────────────┘".yellow
     end
 
     def display_image_slide(slide, index, show_commentary, elapsed_time = 0, timer_paused = false)
@@ -1251,11 +1245,12 @@ module ISpeaker
 
       # Display centered content
       content_lines.each do |line|
-        line_text = if line == "THE END"
+        line_text = case line
+                    when "THE END"
                       line.bold.green
-                    elsif line == @talk.title
+                    when @talk.title
                       line.light_blue
-                    elsif line == "Thank you!"
+                    when "Thank you!"
                       line.yellow
                     else
                       line
@@ -1309,10 +1304,10 @@ module ISpeaker
           commentary = ai_ask(prompt)
           # Clean up the response - sometimes AI adds quotes or explanations
           commentary = commentary.strip.gsub(/^["']|["']$/, "") if commentary
-          commentary = commentary[0..116] + "..." if commentary.length > 120
+          commentary = "#{commentary[0..116]}..." if commentary.length > 120
 
           @commentary_cache[slide_key] = commentary
-          
+
           # Signal that commentary is ready
           @commentary_ready = true
         rescue StandardError
@@ -1372,7 +1367,7 @@ module ISpeaker
     def wrap_text(text, width)
       return [""] if text.nil? || text.empty?
 
-      words = text.split(" ")
+      words = text.split
       lines = []
       current_line = ""
 
@@ -1419,27 +1414,28 @@ module ISpeaker
     def truncate_with_ansi(text, max_length)
       stripped = strip_ansi_codes(text)
       return text if stripped.length <= max_length
-      
+
       # Simple truncation - more sophisticated preservation could be added later
       visible_chars = 0
       result = ""
-      
+
       text.each_char.with_index do |char, i|
-        if text[i..i+10]&.match?(/\e\[[0-9;]*m/)
+        if text[i..(i + 10)]&.match?(/\e\[[0-9;]*m/)
           # This is start of ANSI sequence, add the whole sequence
-          ansi_match = text[i..-1].match(/\e\[[0-9;]*m/)
+          ansi_match = text[i..].match(/\e\[[0-9;]*m/)
           if ansi_match
             result += ansi_match[0]
-            i += ansi_match[0].length - 1
+            ansi_match[0].length
             next
           end
         end
-        
+
         break if visible_chars >= max_length
+
         result += char
         visible_chars += 1 unless char.match?(/\e/)
       end
-      
+
       result
     end
 
@@ -1450,13 +1446,13 @@ module ISpeaker
 
       # Calculate estimated remaining time if we have the data
       remaining_text = ""
-      if current_slide && total_slides && duration_minutes && total_slides > 0
+      if current_slide && total_slides && duration_minutes && total_slides.positive?
         # Calculate progress and estimated remaining time
         progress = (current_slide + 1).to_f / total_slides
         estimated_total_seconds = duration_minutes * 60
         estimated_remaining_seconds = (estimated_total_seconds * (1 - progress)).to_i
 
-        if estimated_remaining_seconds > 0
+        if estimated_remaining_seconds.positive?
           rem_minutes = estimated_remaining_seconds / 60
           rem_seconds = estimated_remaining_seconds % 60
           remaining_text = " | Est. remaining: #{format("%02d:%02d", rem_minutes, rem_seconds)}".light_black
@@ -1488,13 +1484,13 @@ module ISpeaker
       require "io/console"
 
       # Raw mode to capture single keypress
-      char = STDIN.getch
+      char = $stdin.getch
 
       case char
       when "\e" # Escape sequence
-        next_char = STDIN.getch
+        next_char = $stdin.getch
         if next_char == "["
-          arrow = STDIN.getch
+          arrow = $stdin.getch
           case arrow
           when "C" # Right arrow
             :right
@@ -1536,7 +1532,7 @@ module ISpeaker
       if available_viewers.empty?
         puts "\n⚠️  No image viewers found!".yellow
         puts "Install one of the following for image support:".light_blue
-        ImageViewer::VIEWERS.each do |_name, config|
+        ImageViewer::VIEWERS.each_value do |config|
           puts "  • #{config[:command]} - #{config[:description]}".light_blue
         end
         puts "\nRecommended: `brew install viu` or `apt install viu`".green
@@ -1652,7 +1648,7 @@ module ISpeaker
 
     def edit_slide(slide, ai_suggestions: nil)
       loop do
-        puts "\n" + ("─" * 50)
+        puts "\n#{"─" * 50}"
         slide_index = @talk.slides.index(slide) + 1
         puts "Editing Slide #{slide_index}:".bold
         puts slide
@@ -1931,7 +1927,7 @@ module ISpeaker
 
             break if iteration >= max_iterations
 
-            unless fixes_applied > 0 && @prompt.yes?("\n🔄 #{fixes_applied} fixes applied. Continue improving? (Iteration #{iteration + 1}/#{max_iterations})")
+            unless fixes_applied.positive? && @prompt.yes?("\n🔄 #{fixes_applied} fixes applied. Continue improving? (Iteration #{iteration + 1}/#{max_iterations})")
               break
             end
 
@@ -1957,7 +1953,7 @@ module ISpeaker
           puts "Iterations completed: #{iteration}".blue
 
           # Show final structure overview
-          if total_fixes_applied > 0 && @prompt.yes?("\nWould you like to see the improved structure?")
+          if total_fixes_applied.positive? && @prompt.yes?("\nWould you like to see the improved structure?")
             show_talk_overview
           end
         else
@@ -2285,7 +2281,7 @@ module ISpeaker
         end
       end
 
-      if fixes_applied > 0
+      if fixes_applied.positive?
         # Renumber all slides
         # Slide numbers are now calculated dynamically
         auto_save
@@ -2329,7 +2325,7 @@ module ISpeaker
         end
       end
 
-      if fixes_applied > 0
+      if fixes_applied.positive?
         # Renumber all slides
         # Slide numbers are now calculated dynamically
         auto_save
@@ -2435,7 +2431,7 @@ module ISpeaker
     def apply_modify_slide_fix(fix)
       # Extract slide number from position or action
       slide_num = extract_slide_number(fix["position"] || fix["action"])
-      return unless slide_num && slide_num > 0 && slide_num <= @talk.slides.length
+      return unless slide_num&.positive? && slide_num <= @talk.slides.length
 
       slide = @talk.slides[slide_num - 1]
 
@@ -3006,7 +3002,7 @@ module ISpeaker
       puts "   Recommended slides: #{recommended_slides} (at ~1-2 minutes per slide)"
       puts "   Suggested additions: #{[recommended_slides - current_slides, 0].max} more slides"
 
-      if current_slides == 0
+      if current_slides.zero?
         puts "\n⚠️  No slides yet. Please create some slides first.".yellow
         puts "   Use 'Create complete talk with AI' from the main menu.".light_blue
         return
@@ -3064,7 +3060,7 @@ module ISpeaker
       # Ask where to insert
       position = @prompt.ask("\nInsert after which slide? (0 for beginning):", convert: :int)
 
-      if position < 0 || position > @talk.slides.length
+      if position.negative? || position > @talk.slides.length
         puts "❌ Invalid position".red
         return
       end
@@ -3079,7 +3075,7 @@ module ISpeaker
 
       begin
         # Prepare context about surrounding slides
-        before_slide = position > 0 ? @talk.slides[position - 1] : nil
+        before_slide = position.positive? ? @talk.slides[position - 1] : nil
         after_slide = position < @talk.slides.length ? @talk.slides[position] : nil
 
         slides_prompt = <<~PROMPT
@@ -3401,7 +3397,7 @@ module ISpeaker
             puts "✅ Added: #{slide.title}".green
 
             # Show progress
-            if added_count % 5 == 0
+            if (added_count % 5).zero?
               puts "   Progress: #{added_count}/#{target_count - current_count} slides added...".light_blue
             end
           end
@@ -3717,7 +3713,7 @@ module ISpeaker
 
     def format_web_evidence_for_analysis(web_evidence)
       web_evidence.map do |evidence|
-        "Source: #{evidence[:source_title]} (#{evidence[:source_url]})\n" +
+        "Source: #{evidence[:source_title]} (#{evidence[:source_url]})\n" \
           "Content: #{evidence[:content][0..500]}...\n"
       end.join("\n")
     end
@@ -3731,7 +3727,7 @@ module ISpeaker
       }
 
       # Extract overall verdict
-      if match = analysis_text.match(/OVERALL_VERDICT:\s*(.+?)$/m)
+      if (match = analysis_text.match(/OVERALL_VERDICT:\s*(.+?)$/m))
         result[:overall_verdict] = match[1].strip
       end
 
@@ -3740,19 +3736,19 @@ module ISpeaker
       claim_sections.each do |section|
         claim_verdict = {}
 
-        if match = section.match(/Verdict:\s*(.+?)$/m)
+        if (match = section.match(/Verdict:\s*(.+?)$/m))
           claim_verdict[:verdict] = match[1].strip
         end
 
-        if match = section.match(/Confidence:\s*(.+?)$/m)
+        if (match = section.match(/Confidence:\s*(.+?)$/m))
           claim_verdict[:confidence] = match[1].strip
         end
 
-        if match = section.match(/Evidence:\s*(.+?)(?=Sources:|RECOMMENDATIONS:|$)/m)
+        if (match = section.match(/Evidence:\s*(.+?)(?=Sources:|RECOMMENDATIONS:|$)/m))
           claim_verdict[:evidence] = match[1].strip
         end
 
-        if match = section.match(/Sources:\s*(.+?)(?=RECOMMENDATIONS:|$)/m)
+        if (match = section.match(/Sources:\s*(.+?)(?=RECOMMENDATIONS:|$)/m))
           claim_verdict[:sources] = match[1].strip
         end
 
@@ -3760,13 +3756,13 @@ module ISpeaker
       end
 
       # Extract recommendations
-      if match = analysis_text.match(/RECOMMENDATIONS:\s*(.+?)(?=SUMMARY:|$)/m)
+      if (match = analysis_text.match(/RECOMMENDATIONS:\s*(.+?)(?=SUMMARY:|$)/m))
         recommendations_text = match[1].strip
         result[:recommendations] = recommendations_text.split(/\n-\s*/).map(&:strip).reject(&:empty?)
       end
 
       # Extract summary
-      if match = analysis_text.match(/SUMMARY:\s*(.+?)$/m)
+      if (match = analysis_text.match(/SUMMARY:\s*(.+?)$/m))
         result[:summary] = match[1].strip
       end
 
@@ -3893,7 +3889,7 @@ module ISpeaker
     def display_fact_check_summary(results)
       return if results.empty?
 
-      puts "\n" + ("=" * 60)
+      puts "\n#{"=" * 60}"
       puts "🔍 FACT-CHECK SUMMARY".cyan.bold
       puts "=" * 60
 
@@ -3926,7 +3922,7 @@ module ISpeaker
       puts "   ⚠️  Partially verified: #{partial_count} slides"
       puts "   ❌ Issues found: #{contradicted_count} slides"
 
-      if contradicted_count > 0 || partial_count > 0
+      if contradicted_count.positive? || partial_count.positive?
         puts "\n💡 Next Steps:"
         puts "   • Review slides with issues or partial verification"
         puts "   • Update claims based on fact-check recommendations"
@@ -4127,10 +4123,10 @@ module ISpeaker
       bracket_count = 0
       end_index = start_index
 
-      response[start_index..-1].each_char.with_index(start_index) do |char, i|
+      response[start_index..].each_char.with_index(start_index) do |char, i|
         bracket_count += 1 if char == "{"
         bracket_count -= 1 if char == "}"
-        if bracket_count == 0
+        if bracket_count.zero?
           end_index = i
           break
         end
@@ -4249,14 +4245,14 @@ module ISpeaker
 
     def export_text(filename)
       content = "#{@talk.title}\n"
-      content += ("=" * @talk.title.length) + "\n\n"
+      content += "#{"=" * @talk.title.length}\n\n"
       content += "Description: #{@talk.description}\n"
       content += "Target Audience: #{@talk.target_audience}\n"
       content += "Duration: #{@talk.duration_minutes} minutes\n\n"
 
       @talk.slides.each_with_index do |slide, index|
         content += "#{index + 1}. #{slide.title}\n"
-        content += ("-" * (slide.title.length + 3)) + "\n"
+        content += "#{"-" * (slide.title.length + 3)}\n"
         slide.content.each { |point| content += "• #{point}\n" }
         content += "\nNotes: #{slide.notes}\n" unless slide.notes.strip.empty?
         content += "\n"
@@ -4299,7 +4295,7 @@ module ISpeaker
 
       # Add each slide
       @talk.slides.each_with_index do |slide, index|
-        next unless index > 0 # Skip first slide as it's already in the cover
+        next unless index.positive? # Skip first slide as it's already in the cover
 
         content += "---\n"
 
@@ -4314,7 +4310,7 @@ module ISpeaker
           content += "::left::\n\n"
           slide.content[0...mid_point].each { |point| content += "- #{point}\n" }
           content += "\n::right::\n\n"
-          slide.content[mid_point..-1].each { |point| content += "- #{point}\n" }
+          slide.content[mid_point..].each { |point| content += "- #{point}\n" }
         else
           slide.content.each { |point| content += "- #{point}\n" }
         end
@@ -4346,6 +4342,7 @@ module ISpeaker
     # Check if a slide is an IRB demo slide
     def is_irb_slide?(slide)
       return false unless slide
+
       # Check if slide title or content mentions IRB or has code examples
       slide.title.downcase.include?("irb") ||
         slide.content.any? { |line| line.include?("```ruby") || line.downcase.include?("irb") }
@@ -4354,63 +4351,63 @@ module ISpeaker
     # Execute Ruby code from a demo slide
     def launch_irb_for_slide(slide)
       system("clear") || system("cls")
-      
+
       puts "╔#{"═" * 78}╗".cyan
       puts "║#{slide.title.center(78).cyan.bold}║".cyan
       puts "╚#{"═" * 78}╝".cyan
       puts
-      
+
       # Extract Ruby code from slide content
       ruby_code = extract_ruby_code(slide.content)
-      
+
       if ruby_code.any?
         puts "💎 Executing Ruby code...".green.bold
         puts "─" * 40
-        
+
         # Create a binding for our execution context
         demo_binding = binding
         demo_binding.eval("require 'stringio'")
-        
+
         ruby_code.each do |code|
           puts "#{"> ".green.bold}#{code.yellow}"
-          
+
           # Capture stdout
           old_stdout = $stdout
           captured_output = StringIO.new
-          
+
           begin
             # Redirect stdout to capture output
             $stdout = captured_output
-            
+
             # Show warnings for chilled strings
             old_verbose = $VERBOSE
             $VERBOSE = true
             Warning[:deprecated] = true if defined?(Warning)
-            
+
             # Capture warnings
             old_stderr = $stderr
             captured_warnings = StringIO.new
             $stderr = captured_warnings
-            
+
             # Evaluate the code
             result = demo_binding.eval(code)
-            
+
             # Restore stderr and stdout
             $stderr = old_stderr
             $stdout = old_stdout
             $VERBOSE = old_verbose
-            
+
             # Display any warnings first (in yellow)
             warnings = captured_warnings.string
             if warnings && !warnings.empty?
               warnings.each_line do |warning|
-                puts "⚠️  #{warning.strip}".yellow if warning.strip.length > 0
+                puts "⚠️  #{warning.strip}".yellow if warning.strip.length.positive?
               end
             end
-            
+
             # Display captured output
             output = captured_output.string
-            if !output.empty?
+            unless output.empty?
               # Format benchmark output specially
               if output.include?("user") && output.include?("system") && output.include?("total")
                 # It's benchmark output - format it nicely
@@ -4422,12 +4419,12 @@ module ISpeaker
                     # Benchmark result lines - highlight the times
                     parts = line.split(/\s+/)
                     label = parts[0]
-                    times = parts[1..-1]
-                    
+                    times = parts[1..]
+
                     # Format with colors
                     print "  #{label.ljust(12).yellow}"
                     times.each_with_index do |time, idx|
-                      if idx == 2  # total time column
+                      if idx == 2 # total time column
                         print time.rjust(12).green.bold
                       else
                         print time.rjust(12).light_black
@@ -4442,7 +4439,7 @@ module ISpeaker
                 print output
               end
             end
-            
+
             # Display the result
             if result.nil?
               puts "=> nil".light_black
@@ -4451,30 +4448,27 @@ module ISpeaker
             else
               puts "=> #{result.inspect}".green
             end
-            
-          rescue => e
+          rescue StandardError => e
             $stdout = old_stdout
             $stderr = old_stderr if defined?(old_stderr)
             puts "❌ #{e.class}: #{e.message}".red
           end
         end
-        
+
         puts "─" * 40
       else
         puts "No Ruby code found in this slide.".yellow
       end
-      
+
       puts "\n🎬 Press any key to return to slideshow...".cyan
       get_single_keypress
     end
-
-
 
     # Extract Ruby code examples from slide content
     def extract_ruby_code(content)
       ruby_code = []
       in_code_block = false
-      
+
       content.each do |line|
         if line.strip == "```ruby"
           in_code_block = true
@@ -4486,10 +4480,11 @@ module ISpeaker
           # Skip comments and empty lines, extract actual Ruby commands
           clean_line = line.strip
           next if clean_line.empty? || clean_line.start_with?("#")
+
           ruby_code << clean_line
         end
       end
-      
+
       ruby_code
     end
   end

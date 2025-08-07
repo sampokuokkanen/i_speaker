@@ -6,7 +6,7 @@ require "colorize"
 require_relative "../lib/i_speaker/notes_viewer"
 
 # Main execution
-if __FILE__ == $0
+if __FILE__ == $PROGRAM_NAME
   port = ARGV[0]&.to_i || 9000
 
   puts "🔍 Connecting to i_speaker presentation on port #{port}...".cyan

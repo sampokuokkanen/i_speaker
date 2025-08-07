@@ -21,7 +21,7 @@ rescue StandardError => e
   exit 1
 end
 
-puts "\n" + ("=" * 40) + "\n"
+puts "\n#{"=" * 40}\n"
 
 # Create a sample talk with AI assistance
 puts "Creating a sample talk about Ruby...".yellow
@@ -97,7 +97,7 @@ slides_to_create.each_with_index do |slide_title, index|
 end
 
 # Display the complete talk
-puts "\n" + ("=" * 40)
+puts "\n#{"=" * 40}"
 puts "\n📊 Complete Talk Structure:".cyan.bold
 puts talk.summary
 

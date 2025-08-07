@@ -78,7 +78,7 @@ File.write("corrupted_talk.json", "{ invalid json content }")
 puts "   ⚠️  Created corrupted file for testing: corrupted_talk.json".yellow
 
 puts "\n📂 Current directory now contains:".blue
-Dir.glob("*.json").sort.each do |file|
+Dir.glob("*.json").each do |file|
   size = File.size(file)
   mtime = File.mtime(file).strftime("%Y-%m-%d %H:%M")
   puts "   #{file} (#{size} bytes, modified: #{mtime})"
@@ -100,7 +100,7 @@ puts "to see the improved interface in action!".green
 puts "\n📋 Preview of what you'll see:".blue
 puts "Available talk files:"
 
-Dir.glob("*.json").sort.each do |filename|
+Dir.glob("*.json").each do |filename|
   data = JSON.parse(File.read(filename), symbolize_names: true)
   title = data[:title] || "Untitled"
   slide_count = data[:slides]&.length || 0

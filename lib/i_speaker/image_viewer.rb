@@ -59,7 +59,7 @@ module ISpeaker
 
             # Wait for keypress
             require "io/console"
-            STDIN.getch
+            $stdin.getch
 
             # Kill the viewer process
             begin
@@ -103,7 +103,7 @@ module ISpeaker
 
       def create_sample_screenshots
         screenshots_dir = File.join(Dir.pwd, "sample_screenshots")
-        Dir.mkdir(screenshots_dir) unless Dir.exist?(screenshots_dir)
+        FileUtils.mkdir_p(screenshots_dir)
 
         # Create simple text-based "screenshots" as examples
         sample_files = [

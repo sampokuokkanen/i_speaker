@@ -44,7 +44,7 @@
         "puts company.frozen? # => false",
         "```"
       ],
-      "notes": "Code details for reference. The actual execution happens on the previous slide.",
+      "notes": "Code details for reference.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -126,13 +126,71 @@
       "slide_type": "content"
     },
     {
+      "title": "The Surprising Behavior Before Ruby 2.1",
+      "content": [
+        "**Before Ruby 2.1**: Each .freeze created a new object",
+        "",
+        "```ruby",
+        "# Ruby 2.0 and earlier - SURPRISE!",
+        "\"hello\".freeze == \"hello\".freeze  # => false (!)",
+        "\"hello\".freeze.object_id == \"hello\".freeze.object_id  # => false",
+        "```",
+        "",
+        "**After Ruby 2.1**: Deduplication makes them identical",
+        "",
+        "```ruby", 
+        "# Ruby 2.1+ - Expected behavior",
+        "\"hello\".freeze == \"hello\".freeze  # => true",
+        "\"hello\".freeze.object_id == \"hello\".freeze.object_id  # => true",
+        "```"
+      ],
+      "notes": "This surprises many newer Ruby developers! Before 2.1, frozen strings with identical content were still separate objects. This made .freeze almost useless for performance.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "The Magic Comment Origin Story",
+      "content": [
+        "**October 2013**: Akira Tanaka proposes frozen_string_literal",
+        "**August 2015**: Akira Matsuda revives the discussion", 
+        "**September 2015**: Matz approves for Ruby 2.3",
+        "**Ruby 2.3 (2015)**: Magic comment implemented",
+        "",
+        "Matz's reluctant approval: \"I don't like pragmas but if it is required\"",
+        "",
+        "Source: Ruby Issue #8976 - https://bugs.ruby-lang.org/issues/8976"
+      ],
+      "notes": "Give proper attribution to the creators and show the multi-year discussion process. This was not a quick decision!",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "The Great Debate: Charles Nutter's Opposition (2013)",
+      "content": [
+        "**Charles Nutter (JRuby creator) was strongly opposed:**",
+        "",
+        "\"*It would be a very bad idea to have a directive that completely changes the meaning of code from one file to another.*\"",
+        "",
+        "**His key concerns:**",
+        "• File-to-file inconsistency: same code, different behavior",
+        "• Developer confusion: frozen errors in some files, not others", 
+        "• Forced workarounds: must use String.new() instead of \"\"",
+        "",
+        "**Counter-argument (Brian Shirai):** \"Encoding pragma already does this!\""
+      ],
+      "notes": "Note that this was 12 years ago! Show the contentious debate. Charles's concerns about inconsistency are exactly what many developers still worry about today. This wasn't a unanimous decision!",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
       "title": "Ruby 2.3 and Beyond",
       "content": [
-        "Ruby 2.3: Introduced # frozen_string_literal: true pragma",
+        "Ruby 2.3: Magic comment goes live as **experimental feature**",
+        "Original goal: Migration path toward Ruby 3.0 default frozen literals",
         "Ruby 3.0 plan: Default frozen literals postponed due to compatibility",
-        "Ruby 3.3+: Introduction of 'chilled strings' as transition mechanism"
+        "Ruby 3.3+: Introduction of 'chilled strings' as new transition mechanism"
       ],
-      "notes": "Present the timeline progression from manual freezing to pragma to the current chilled string approach.",
+      "notes": "Present the timeline progression from experimental pragma to the current chilled string approach. Emphasize the experimental nature.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -268,9 +326,7 @@
       "content": [
         "Ruby 1.9: Added encoding support (m17n) - strings remained mutable",
         "Ruby 2.1: Introduced frozen string deduplication for memory savings",
-        "Ruby 2.3: Added `# frozen_string_literal: true` pragma",
-        "JRuby: Uses Java strings internally but maintains Ruby's mutable semantics",
-        "TruffleRuby: Interpolated strings with pragma stay mutable (aligns with Ruby 3.0 behavior)"
+        "Ruby 2.3: Added `# frozen_string_literal: true` pragma"
       ],
       "notes": "Implementation note: MRI vs JRuby vs Truffle. We focus on MRI, but JRuby has its own approach (Java strings) and Truffle leaves dynamic strings mutable (but core code is frozen).",
       "image_path": null,
@@ -305,6 +361,34 @@
       "slide_type": "content"
     },
     {
+      "title": "String Duplication Basics in Ruby",
+      "content": [
+        "When you need a mutable copy of a string:",
+        "",
+        "```ruby",
+        "str = 'hello'.freeze",
+        "",
+        "# Method 1: Unary plus (Ruby 2.3+)",
+        "copy1 = +str            # Concise, returns mutable copy",
+        "",
+        "# Method 2: String concatenation", 
+        "copy2 = str + ''        # Fast, idiomatic",
+        "",
+        "# Method 3: Duplication",  
+        "copy3 = str.dup         # Clear intent, now fast in 3.3+",
+        "",
+        "# Method 4: Cloning",
+        "copy4 = str.clone       # Preserves frozen state",
+        "",
+        "# Method 5: String constructor",
+        "copy5 = String.new(str) # Explicit new object",
+        "```"
+      ],
+      "notes": "Establish the foundation - these are the main ways Ruby developers create mutable copies. Each has different use cases and performance characteristics.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
       "title": "Performance Benefits",
       "content": [
         "Freezing literals cuts object allocations",
@@ -319,16 +403,32 @@
       "slide_type": "content"
     },
     {
+      "title": "Why .dup Was Slow Before Ruby 3.3",
+      "content": [
+        "**The old pattern**: `str + ''` was faster than `str.dup`",
+        "**Why?** String concatenation had better optimizations",
+        "",
+        "Ruby 3.3 fixed this imbalance:",
+        "• Optimized String#dup implementation", 
+        "• Now `str.dup` performs as well as `str + ''`",
+        "• Better support for explicit mutability patterns"
+      ],
+      "notes": "Before Ruby 3.3, developers avoided .dup because string concatenation was more optimized. This created awkward patterns like `str + ''` for copying strings.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
       "title": "Real-World Performance Impact",
       "content": [
-        "Rails has reported significant memory savings",
-        "Ruby often spends ~20-30% time in GC, so savings = speedups",
+        "Rails has reported significant memory savings from frozen literals",
+        "Ruby often spends ~20-30% time in GC, so memory savings = speedups",
         "",
-        "Ruby 3.3 optimized `String.dup`:",
-        "• Developers can now use `.dup` without performance penalty",
-        "• .dup is now as fast as + for creating mutable copies"
+        "**Now with Ruby 3.3's .dup optimization:**",
+        "• Clean, readable code: `str.dup` instead of `str + ''`",
+        "• No performance penalty for explicit mutability",
+        "• Better ergonomics for frozen string workflows"
       ],
-      "notes": "Ruby 3.3 made .dup as fast as +, removing the performance penalty for explicit mutability.",
+      "notes": "Combine memory savings from frozen literals with better ergonomics from .dup optimization. This makes the transition to frozen strings much smoother.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -350,14 +450,14 @@
         "Why so slow? Ruby values backward compatibility over speed",
         "",
         "The famous Ruby decision timeline:",
-        "• 2013: First discussions about frozen strings",
-        "• 2016: Magic comment introduced",
-        "• 2024: Chilled strings finally implemented",
-        "• 2025+: Still debating R1/R2 phases",
+        "• **2013**: Akira Tanaka proposes frozen_string_literal (Issue #8976)",
+        "• **2015**: Magic comment implemented in Ruby 2.3",
+        "• **2024**: Chilled strings finally implemented (Issue #20205)",
+        "• **2025+**: Still debating R1/R2 phases",
         "",
-        "Source: Ruby Issue #20205 - https://bugs.ruby-lang.org/issues/20205"
+        "**11+ years** and counting!"
       ],
-      "notes": "Perfect example of Ruby's philosophy - this is a culture that values not breaking existing code over rapid innovation.",
+      "notes": "Perfect example of Ruby's philosophy - this is a culture that values not breaking existing code over rapid innovation. Updated with correct dates and attribution.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -438,9 +538,30 @@
       "slide_type": "content"
     },
     {
+      "title": "The f-Suffix: Technical Effectiveness",
+      "content": [
+        "**Regular string**: `\"hello world\"`",
+        "```",
+        "putstring \"hello world\"  # Creates new object each time",
+        "```",
+        "",
+        "**F-suffix string**: `\"hello world\"f`", 
+        "```",
+        "putobject \"hello world\"  # Reuses same frozen object",
+        "```",
+        "",
+        "**Key difference**: putstring vs putobject bytecode",
+        "• putstring = new object every time (garbage)",
+        "• putobject = reuse same frozen object (efficient)"
+      ],
+      "notes": "The f-suffix proposal was technically sound - it would have generated more efficient bytecode. This shows the technical merit behind the proposal, even though it was rejected for aesthetic reasons.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
       "title": "Why \"hello\"f Was Rejected",
       "content": [
-        "Community feedback was negative:",
+        "Despite technical merit, community feedback was negative:",
         "• **\"Ugly\" syntax** - Didn't feel Ruby-like",
         "• **Too verbose** - Every string needs tagging",
         "• **Breaking change** - Incompatible with older Ruby",
@@ -450,7 +571,7 @@
         "",
         "Source: https://bugs.ruby-lang.org/issues/8579"
       ],
-      "notes": "Historical context: Ruby seriously considered f-suffix syntax (like \"text\"f) but community reaction was negative. The magic comment approach was more Ruby-like - elegant, file-level, and doesn't require tagging every string. This shows Ruby's commitment to beautiful, readable code.",
+      "notes": "Historical context: Ruby seriously considered f-suffix syntax but community reaction was negative. The magic comment approach was more Ruby-like - elegant, file-level, and doesn't require tagging every string. This shows Ruby's commitment to beautiful, readable code over pure performance.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -573,6 +694,27 @@
         "Step 5: Monitor performance and memory usage improvements"
       ],
       "notes": "This addresses the critical gap identified in the analysis. Make this actionable with specific commands and tools. Emphasize that this is a gradual process that can be done incrementally. Provide a clear path forward for attendees to apply this knowledge.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "RuboCop's Strong Opinions 💪",
+      "content": [
+        "RuboCop really doesn't like `frozen_string_literal: false`:",
+        "",
+        "```ruby",
+        "# This triggers a warning!",
+        "# frozen_string_literal: false",
+        "# ⚠️ Style/FrozenStringLiteralComment:", 
+        "#    Frozen string literal comment must be set to `true`",
+        "```",
+        "",
+        "**RuboCop's philosophy**: Push developers toward better practices",
+        "• Defaults assume you want performance improvements",
+        "• `false` is seen as intentionally opting out",
+        "• Tool culture reinforces Ruby's direction"
+      ],
+      "notes": "Interesting cultural aspect - even the tooling has opinions about which direction Ruby should go! RuboCop acts as a gentle pressure toward frozen strings.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -789,6 +931,35 @@
       "slide_type": "content"
     },
     {
+      "title": "Connect on X! 🐦",
+      "content": [
+        "Follow me for more Ruby insights and updates:",
+        "",
+        "🐦 **@KuokkanenSampo**",
+        "",
+        "• Evil Martians Japan updates", 
+        "• Occasionally Ruby tips (maybe)",
+        "• Pictures of my Honda Beat"
+      ],
+      "notes": "Show QR code for X account. Encourage attendees to connect for ongoing Ruby discussions and updates.",
+      "image_path": "qr_code_x_account.png",
+      "slide_type": "mixed"
+    },
+    {
+      "title": "Get the Presentation Tool! 🛠️",
+      "content": [
+        "This presentation was created with i_speaker:",
+        "• AI-powered Ruby gem for creating presentations",
+        "• Interactive console interface with dual AI support",
+        "• Multiple export formats (Markdown, Slidev, JSON)",
+        "",
+        "🔗 **Source code and gem available at:**"
+      ],
+      "notes": "Show QR code for the i_speaker GitHub repository. This tool was used to create this presentation.",
+      "image_path": "qr_code_github_i_speaker.png",
+      "slide_type": "mixed"
+    },
+    {
       "title": "謝謝 Taiwan! Thank You! 🇹🇼❄️",
       "content": [
         "Thank you RubyConf Taiwan for the warm welcome!",
@@ -816,7 +987,6 @@
         "",
         "Features:",
         "• ASCII art Taiwan flag",
-        "• Realistic wave physics with sine functions", 
         "• 30 frames of smooth animation",
         "",
         "🎯 **Surprise!** Press ENTER to see the Taiwan flag wave!"
@@ -827,5 +997,5 @@
     }
   ],
   "estimated_duration": 127,
-  "completion_status": "58/58 slides completed"
+  "completion_status": "67/67 slides completed"
 }

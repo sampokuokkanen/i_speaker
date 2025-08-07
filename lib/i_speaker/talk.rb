@@ -70,7 +70,7 @@ module ISpeaker
       completed_slides = @slides.count(&:complete?)
       total_slides = @slides.length
 
-      return "No slides created yet" if total_slides == 0
+      return "No slides created yet" if total_slides.zero?
 
       "#{completed_slides}/#{total_slides} slides completed"
     end
@@ -95,14 +95,14 @@ module ISpeaker
           # Parse existing file to check if it's different from our current state
           existing_data = JSON.parse(current_content, symbolize_names: true)
           our_data = to_hash
-          
+
           # Simple comparison - if the slide count or basic structure differs, warn about conflict
           if existing_data[:slides]&.length != our_data[:slides]&.length ||
              existing_data[:title] != our_data[:title] ||
              existing_data[:description] != our_data[:description]
-            
+
             # Create backup of current file
-            backup_filename = "#{filename}.backup_#{Time.now.strftime('%Y%m%d_%H%M%S')}"
+            backup_filename = "#{filename}.backup_#{Time.now.strftime("%Y%m%d_%H%M%S")}"
             File.write(backup_filename, current_content)
             puts "\n⚠️  File conflict detected! Created backup: #{backup_filename}".yellow
             puts "External changes detected in #{filename}. Proceeding with save...".yellow
@@ -112,9 +112,9 @@ module ISpeaker
           puts "\n⚠️  Existing file appears corrupted. Overwriting...".yellow
         end
       end
-      
+
       # Use fast generation in production, pretty in development
-      json_content = ENV['RACK_ENV'] == 'production' ? JSON.generate(to_hash) : JSON.pretty_generate(to_hash)
+      json_content = ENV["RACK_ENV"] == "production" ? JSON.generate(to_hash) : JSON.pretty_generate(to_hash)
       File.write(filename, json_content)
     end
 

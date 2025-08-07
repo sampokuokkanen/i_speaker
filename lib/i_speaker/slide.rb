@@ -43,7 +43,7 @@ module ISpeaker
 
     def display_summary
       content_preview = @content.first(2).join(", ")
-      content_preview + "..." if @content.length > 2
+      "#{content_preview}..." if @content.length > 2
       "#{@title} (#{@content.length} points)"
     end
 

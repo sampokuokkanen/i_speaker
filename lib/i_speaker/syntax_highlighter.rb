@@ -8,10 +8,8 @@ module ISpeaker
   module SyntaxHighlighter
     class << self
       def available?
-        @available ||= (
-          system("which cli-highlight > /dev/null 2>&1") ||
-          File.exist?("/opt/homebrew/lib/node_modules/cli-highlight/bin/highlight")
-        )
+        @available ||= system("which cli-highlight > /dev/null 2>&1") ||
+                       File.exist?("/opt/homebrew/lib/node_modules/cli-highlight/bin/highlight")
       end
 
       def highlight(code, language: nil)
@@ -27,7 +25,7 @@ module ISpeaker
                 else
                   ["highlight"] # fallback
                 end
-          
+
           cmd += ["-l", language.to_s] if language
 
           stdout, _stderr, status = Open3.capture3(*cmd, stdin_data: code)
@@ -47,38 +45,30 @@ module ISpeaker
       # Simple fallback highlighter for basic Ruby syntax
       def simple_highlight(code, language = nil)
         return code if code.nil? || code.strip.empty?
-        
+
         # Only do simple highlighting for Ruby
         return code unless language.to_s.downcase == "ruby"
-        
+
         # Apply basic Ruby syntax highlighting
         highlighted = code.dup
-        
+
         # Keywords
-        highlighted.gsub!(/\\b(def|end|class|module|if|unless|else|elsif|case|when|while|until|for|do|begin|rescue|ensure|return|yield|break|next|puts|print|p|require|load)\\b/) do |match|
-          match.blue
-        end
-        
+        highlighted.gsub!(
+          /\\b(def|end|class|module|if|unless|else|elsif|case|when|while|until|for|do|begin|rescue|ensure|return|yield|break|next|puts|print|p|require|load)\\b/, &:blue
+        )
+
         # Strings
-        highlighted.gsub!(/(["'])((?:\\\\.|(?!\\1)[^\\\\])*)\\1/) do |match|
-          match.green
-        end
-        
+        highlighted.gsub!(/(["'])((?:\\\\.|(?!\\1)[^\\])*)\\1/, &:green)
+
         # Numbers
-        highlighted.gsub!(/\\b\\d+(_\\d+)*(\\.\\d+)?\\b/) do |match|
-          match.yellow
-        end
-        
+        highlighted.gsub!(/\\b\\d+(_\\d+)*(\\.\\d+)?\\b/, &:yellow)
+
         # Comments
-        highlighted.gsub!(/#.*$/) do |match|
-          match.light_black
-        end
-        
+        highlighted.gsub!(/#.*$/, &:light_black)
+
         # Symbols
-        highlighted.gsub!(/:([a-zA-Z_]\\w*)/) do |match|
-          match.cyan
-        end
-        
+        highlighted.gsub!(/:([a-zA-Z_]\\w*)/, &:cyan)
+
         highlighted
       end
 

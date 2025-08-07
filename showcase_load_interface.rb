@@ -12,7 +12,7 @@ puts "\n📝 Here's what the improved load interface looks like:".blue
 puts
 
 # Show current directory contents
-json_files = Dir.glob("*.json").sort
+json_files = Dir.glob("*.json")
 
 if json_files.empty?
   puts "📁 No talk files found in current directory.".yellow

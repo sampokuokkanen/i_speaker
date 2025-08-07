@@ -116,7 +116,7 @@ else
 end
 
 # Display the complete talk
-puts "\n" + ("=" * 50)
+puts "\n#{"=" * 50}"
 puts "\n📊 Complete Talk Structure:".cyan.bold
 puts talk.summary
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 # Simple script to clean up stale i_speaker and DRuby processes
 
 puts "🧹 Cleaning up stale i_speaker processes..."
@@ -11,22 +13,20 @@ if processes.empty?
 else
   puts "Found #{processes.length} i_speaker processes:"
   processes.each { |p| puts "  #{p}" }
-  
+
   # Extract PIDs
   pids = processes.map { |p| p.split[1] }.compact
-  
+
   if pids.any?
     print "Kill these processes? (y/N): "
     response = gets.chomp.downcase
-    
-    if response == 'y' || response == 'yes'
+
+    if %w[y yes].include?(response)
       pids.each do |pid|
-        begin
-          Process.kill('TERM', pid.to_i)
-          puts "✅ Killed process #{pid}"
-        rescue => e
-          puts "⚠️ Could not kill process #{pid}: #{e.message}"
-        end
+        Process.kill("TERM", pid.to_i)
+        puts "✅ Killed process #{pid}"
+      rescue StandardError => e
+        puts "⚠️ Could not kill process #{pid}: #{e.message}"
       end
     else
       puts "Skipped cleanup"

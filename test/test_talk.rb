@@ -77,7 +77,7 @@ class TestTalk < Minitest::Test
     # Add some slides
     5.times { @talk.add_slide }
     estimated = @talk.estimated_duration
-    assert(estimated > 0)
+    assert(estimated.positive?)
 
     # More slides should increase duration
     15.times { @talk.add_slide }

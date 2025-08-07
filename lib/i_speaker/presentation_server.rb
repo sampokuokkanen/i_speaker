@@ -22,7 +22,7 @@ module ISpeaker
 
       # Use this instance as the front object
       front_object = self
-      
+
       # Start DRuby service
       DRb.start_service(@server_uri, front_object)
       @server_thread = Thread.new { DRb.thread.join }
@@ -55,21 +55,17 @@ module ISpeaker
 
     # Called by notes viewer to get current state
     def get_current_state
-      state = {
-        slide_index: self.current_slide_index,
-        slide_number: self.current_slide_index + 1,
-        total_slides: self.total_slides,
-        talk_title: self.talk_title,
-        slide_title: self.current_slide&.title || "",
-        slide_notes: self.current_slide&.notes || "",
-        slide_content: self.current_slide&.content || [],
-        slide_type: self.current_slide&.slide_type || :content,
-        server_object_id: self.server_object_id
+      {
+        slide_index: current_slide_index,
+        slide_number: current_slide_index + 1,
+        total_slides: total_slides,
+        talk_title: talk_title,
+        slide_title: current_slide&.title || "",
+        slide_notes: current_slide&.notes || "",
+        slide_content: current_slide&.content || [],
+        slide_type: current_slide&.slide_type || :content,
+        server_object_id: server_object_id
       }
-      
-      
-      state
     end
-
   end
 end
