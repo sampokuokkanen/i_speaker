@@ -88,7 +88,7 @@ module ISpeaker
         state[:slide_content].first(3).each do |item|
           # Truncate long content
           display_item = item.length > 70 ? "#{item[0..67]}..." : item
-          puts "  • #{display_item}".light_white
+          puts "  • #{display_item}".white
         end
         puts "  • ..." if state[:slide_content].length > 3
       end
@@ -104,7 +104,7 @@ module ISpeaker
         # Format notes with word wrapping
         puts "\n"
         format_notes(state[:slide_notes]).each do |line|
-          puts line.light_white
+          puts line.white
         end
       end
 

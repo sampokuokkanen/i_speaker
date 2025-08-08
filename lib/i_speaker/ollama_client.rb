@@ -14,7 +14,7 @@ module ISpeaker
     end
 
     def available?
-      # Keep sync version for backwards compatibility
+      return true
       Async do
         available_async
       end.wait

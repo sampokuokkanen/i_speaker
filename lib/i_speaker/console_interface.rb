@@ -1028,7 +1028,9 @@ module ISpeaker
 
       slide.content.each do |item|
         # Check if this looks like a code block (indented or contains code patterns)
-        if is_code_block?(item)
+        if item == "```ruby" || item == "```"
+          next
+        elsif is_code_block?(item)
           # Format as code block with syntax highlighting - keep as single block
           highlighted_code = SyntaxHighlighter.format_code_block(item.strip)
           content_items << { type: :code_block, content: highlighted_code }
@@ -1097,11 +1099,11 @@ module ISpeaker
           right_padding = [terminal_width - 2 - line_padding - visible_length, 0].max
           # Make bullet points more prominent
           display_line = if line.strip.start_with?("•")
-                           line.gsub(/^(\s*)•/, '\1▸').bold.light_white
+                           line.gsub(/^(\s*)•/, '\1▸').bold.white
                          elsif line.strip.start_with?("▸")
-                           line.bold.light_white
+                           line.bold.white
                          else
-                           line.light_white
+                           line.white
                          end
 
           puts "║#{" " * line_padding}#{display_line}#{" " * right_padding}║"
@@ -1173,7 +1175,7 @@ module ISpeaker
           bullet_line = "• #{item}"
           line_padding = [(terminal_width - 2 - bullet_line.length) / 2, 0].max
           right_padding = [terminal_width - 2 - line_padding - bullet_line.length, 0].max
-          puts "║#{" " * line_padding}#{bullet_line.light_white}#{" " * right_padding}║"
+          puts "║#{" " * line_padding}#{bullet_line.white}#{" " * right_padding}║"
         end
         puts "║#{" " * (terminal_width - 2)}║"
       end
@@ -1256,7 +1258,7 @@ module ISpeaker
         bullet_line = "• #{item}"
         line_padding = [(terminal_width - 2 - bullet_line.length) / 2, 0].max
         right_padding = [terminal_width - 2 - line_padding - bullet_line.length, 0].max
-        puts "║#{" " * line_padding}#{bullet_line.light_white}#{" " * right_padding}║"
+        puts "║#{" " * line_padding}#{bullet_line.white}#{" " * right_padding}║"
       end
       puts "║#{" " * (terminal_width - 2)}║"
 
@@ -1408,7 +1410,7 @@ module ISpeaker
       elsif line.include?("begin") || line.include?("rescue") || line.include?("end")
         line.white
       else
-        line.light_white
+        line.white
       end
     end
     

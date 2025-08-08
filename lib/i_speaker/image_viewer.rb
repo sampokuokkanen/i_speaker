@@ -8,7 +8,7 @@ module ISpeaker
     VIEWERS = {
       viu: {
         command: "viu",
-        args: ["-w", "80"],
+        args: ["-w", "160"],
         description: "Command-line image viewer (Rust)"
       },
       feh: {
@@ -46,33 +46,7 @@ module ISpeaker
         config = VIEWERS[viewer]
         begin
           # For viu, display inline in terminal
-          if viewer == :viu
-            system(config[:command], *config[:args], image_path)
-          else
-            # For GUI viewers, display and wait for user input
-            puts "\n📸 Displaying image: #{File.basename(image_path)}".cyan
-            puts "Press any key after viewing the image...".light_black
-
-            # Launch viewer in background
-            pid = Process.spawn(config[:command], *config[:args], image_path,
-                                out: "/dev/null", err: "/dev/null")
-
-            # Wait for keypress
-            require "io/console"
-            $stdin.getch
-
-            # Kill the viewer process
-            begin
-              Process.kill("TERM", pid)
-            rescue StandardError
-              nil
-            end
-            begin
-              Process.wait(pid)
-            rescue StandardError
-              nil
-            end
-          end
+          system(config[:command], *config[:args], image_path)
           true
         rescue StandardError => e
           puts "❌ Error displaying image: #{e.message}".red

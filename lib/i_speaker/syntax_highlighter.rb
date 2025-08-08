@@ -64,7 +64,7 @@ module ISpeaker
         highlighted.gsub!(/\\b\\d+(_\\d+)*(\\.\\d+)?\\b/, &:yellow)
 
         # Comments
-        highlighted.gsub!(/#.*$/, &:light_black)
+        highlighted.gsub!(/#.*$/, &:white)
 
         # Symbols
         highlighted.gsub!(/:([a-zA-Z_]\\w*)/, &:cyan)
@@ -101,7 +101,7 @@ module ISpeaker
         lines = highlighted.split("\n")
         formatted_lines = lines.map.with_index do |line, index|
           line_num = (index + 1).to_s.rjust(2)
-          "#{line_num.light_black} │ #{line}"
+          "#{line_num.white} │ #{line}"
         end
 
         # Add border
@@ -109,9 +109,9 @@ module ISpeaker
         border = "─" * [max_width + 4, 50].min
 
         [
-          "┌#{border}┐".light_black,
+          "┌#{border}┐".blue,
           *formatted_lines,
-          "└#{border}┘".light_black
+          "└#{border}┘".blue
         ].join("\n")
       end
     end
