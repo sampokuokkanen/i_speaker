@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "async"
 require "tty-prompt"
 require "tty-spinner"
 require "colorize"
@@ -33,6 +34,7 @@ module ISpeaker
       @commentary_threads = {}
       @commentary_ready = false
       @presentation_server = PresentationServer.new
+      @reactor = nil
       setup_ai
       check_serper_setup
     end
@@ -108,10 +110,10 @@ module ISpeaker
 
       return if @ai_available
 
-      puts "ℹ️  AI features disabled. To enable:".light_blue
-      puts "   - Set ZAI_API_KEY environment variable (preferred)".light_blue
-      puts "   - Or make sure Ollama is running: ollama serve".light_blue
-      puts "   - Or configure RubyLLM with API keys".light_blue
+      puts "ℹ️  AI features disabled. To enable:".white
+      puts "   - Set ZAI_API_KEY environment variable (preferred)".white
+      puts "   - Or make sure Ollama is running: ollama serve".white
+      puts "   - Or configure RubyLLM with API keys".white
     end
 
     def ai_ask(prompt, system: nil)
@@ -136,22 +138,17 @@ module ISpeaker
       if @serper_client.available?
         puts "✅ Fact-checking enabled (Serper API connected)".green
       else
-        puts "ℹ️  Fact-checking features disabled. Serper API key not found.".light_blue
-        puts "   You can enable fact-checking by setting SERPER_KEY environment variable".light_blue
-        puts "   Get a free key at: https://serper.dev".light_blue
-
-        # Only ask interactively if not in a test environment
-        if !(ENV["RAKE_TEST"] || $PROGRAM_NAME.include?("rake") || ENV.fetch("CI",
-                                                                             nil)) && @prompt.yes?("Would you like to set up fact-checking with Google search? (requires Serper API key)")
-          setup_serper_key
-        end
+        puts "ℹ️  Fact-checking features disabled. Serper API key not found.".white
+        puts "   You can enable fact-checking by setting SERPER_KEY environment variable".white
+        puts "   Get a free key at: https://serper.dev".white
+        # No longer prompt here - only prompt when actually trying to use fact-checking
       end
     end
 
     def setup_serper_key
       puts "\n🔑 Serper API Setup".cyan.bold
-      puts "Serper provides Google search API for fact-checking your slides.".light_blue
-      puts "Get a free API key at: https://serper.dev".light_blue
+      puts "Serper provides Google search API for fact-checking your slides.".white
+      puts "Get a free API key at: https://serper.dev".white
 
       api_key = @prompt.mask("Enter your Serper API key:")
 
@@ -161,7 +158,7 @@ module ISpeaker
 
         if @serper_client.available?
           puts "✅ Serper API key configured successfully!".green
-          puts "Fact-checking features are now available.".light_blue
+          puts "Fact-checking features are now available.".white
         else
           puts "❌ Invalid API key. Please check and try again.".red
         end
@@ -274,7 +271,7 @@ module ISpeaker
       )
 
       puts "\n✅ Talk created successfully!".green
-      puts @talk.summary.light_blue
+      puts @talk.summary.white
 
       # Auto-save after creating talk
       auto_save
@@ -286,7 +283,7 @@ module ISpeaker
 
     def create_complete_talk_with_ai
       puts "\n🤖 Let's create a complete talk with AI assistance!".green
-      puts "I'll guide you through the process step by step.\n".light_blue
+      puts "I'll guide you through the process step by step.\n".white
 
       # Get the title
       title = @prompt.ask("What's the title of your talk?") do |q|
@@ -296,7 +293,7 @@ module ISpeaker
 
       # Get initial description - more detailed for AI
       puts "\n📝 Now let's describe your talk in detail...".yellow
-      puts "This description helps the AI understand your goals and create better content.".light_blue
+      puts "This description helps the AI understand your goals and create better content.".white
 
       description = @prompt.multiline("Describe your talk (what's it about, key messages, main goals, etc.):") do |q|
         q.required(true)
@@ -427,7 +424,7 @@ module ISpeaker
         end
 
         # Show preview and get confirmation
-        puts "\n📋 Here's the proposed talk structure:".blue
+        puts "\n📋 Here's the proposed talk structure:".white
         puts "\n#{@talk.title.bold}"
         puts @talk.description
 
@@ -454,32 +451,32 @@ module ISpeaker
             end
 
             puts "\n🎉 Complete talk created successfully!".green.bold
-            puts "Total slides: #{@talk.slides.length}".blue
+            puts "Total slides: #{@talk.slides.length}".white
 
             # Auto-save after creating complete talk
             auto_save
 
-            puts "\nYou can now edit individual slides, reorder them, or export your talk.".light_blue
+            puts "\nYou can now edit individual slides, reorder them, or export your talk.".white
           else
             puts "\nNo problem! The talk has been created without slides.".yellow
-            puts "You can add slides manually or use AI assistance from the main menu.".light_blue
+            puts "You can add slides manually or use AI assistance from the main menu.".white
           end
         else
           puts "\nAI couldn't generate slides automatically, but the talk structure is ready.".yellow
-          puts "You can add slides manually or use AI assistance from the main menu.".light_blue
+          puts "You can add slides manually or use AI assistance from the main menu.".white
         end
       rescue JSON::ParserError
         puts "\n❌ AI response wasn't in expected JSON format. Using simpler approach.".red
         puts "✅ Basic talk structure created successfully!".green
         auto_save  # Save what we have
-        puts @talk.summary.light_blue
-        puts "\n💡 You can now add slides manually or use individual AI assistance from the main menu.".blue
+        puts @talk.summary.white
+        puts "\n💡 You can now add slides manually or use individual AI assistance from the main menu.".white
       rescue StandardError => e
         puts "\n❌ Error with AI generation: #{e.message}".red
         puts "✅ Basic talk structure created successfully!".green
         auto_save  # Save what we have
-        puts @talk.summary.light_blue
-        puts "\n💡 You can now add slides manually or use individual AI assistance from the main menu.".blue
+        puts @talk.summary.white
+        puts "\n💡 You can now add slides manually or use individual AI assistance from the main menu.".white
       end
     end
 
@@ -491,11 +488,11 @@ module ISpeaker
 
       if json_files.empty?
         puts "\n📁 No talk files found in current directory.".yellow
-        puts "   Create a new talk or make sure you're in the right directory.".light_blue
+        puts "   Create a new talk or make sure you're in the right directory.".white
         return
       end
 
-      puts "\n📁 Available talk files (most recent first):".blue
+      puts "\n📁 Available talk files (most recent first):".white
 
       # Display files with preview info
       file_options = []
@@ -543,7 +540,7 @@ module ISpeaker
           @current_filename = filename # Set current filename for auto-save
           load_commentary_cache # Load cached commentary
           puts "\n✅ Talk loaded successfully!".green
-          puts @talk.summary.light_blue
+          puts @talk.summary.white
         rescue StandardError => e
           puts "\n❌ Error loading talk: #{e.message}".red
           puts "   Make sure the file is a valid i_speaker JSON file.".yellow
@@ -569,7 +566,7 @@ module ISpeaker
         return
       end
 
-      puts "\n📁 JSON files in #{File.expand_path(path)} (most recent first):".blue
+      puts "\n📁 JSON files in #{File.expand_path(path)} (most recent first):".white
 
       file_options = []
       json_files.each do |full_path|
@@ -602,7 +599,7 @@ module ISpeaker
     end
 
     def view_sample_talks
-      puts "\n📚 Sample Talks:".blue
+      puts "\n📚 Sample Talks:".white
 
       SampleTalks.all.each_with_index do |talk, index|
         puts "\n#{index + 1}. #{talk[:title].bold}"
@@ -621,7 +618,7 @@ module ISpeaker
     end
 
     def show_sample_talk_details(sample_talk)
-      puts "\n#{sample_talk[:title].bold.blue}"
+      puts "\n#{sample_talk[:title].bold.white}"
       puts sample_talk[:description]
       puts "\nSlides:".bold
 
@@ -682,7 +679,7 @@ module ISpeaker
     end
 
     def show_talk_overview
-      puts "\n#{@talk.summary.light_blue}"
+      puts "\n#{@talk.summary.white}"
 
       if @talk.slides.any? && @prompt.yes?("\nWould you like to see detailed slide content?")
         @talk.slides.each_with_index do |slide, index|
@@ -705,8 +702,8 @@ module ISpeaker
       # Ask if they want AI commentary
       use_commentary = false
       if @ai_available
-        puts "\n🎭 Would you like live AI commentary during the slideshow?".cyan
-        puts "   The AI will generate witty remarks and dad jokes about each slide!".light_blue
+        puts "\n🎭 Would you like live AI commentary during the slideshow?".white
+        puts "   The AI will generate witty remarks and dad jokes about each slide!".white
         use_commentary = @prompt.yes?("Enable AI Comedy Commentary?")
       end
 
@@ -716,7 +713,7 @@ module ISpeaker
       pause_start_time = nil
       total_pause_duration = 0
 
-      puts "\n🎬 Starting presentation#{" with AI commentary" if use_commentary}...".cyan
+      puts "\n🎬 Starting presentation#{" with AI commentary" if use_commentary}...".white
       puts "Navigation: SPACE/→ = Next | ← = Previous | ENTER = IRB Demo | C = Commentary | P = Pause/Resume | ESC = Exit".light_black
       puts "Tip: Images will prompt ENTER to view | IRB slides launch interactive Ruby | Timer shows elapsed time".light_black
       # Removed sleep for faster start
@@ -808,8 +805,8 @@ module ISpeaker
       # Ask if they want AI commentary
       use_commentary = false
       if @ai_available
-        puts "\n🎭 Would you like live AI commentary during the slideshow?".cyan
-        puts "   The AI will generate witty remarks and dad jokes about each slide!".light_blue
+        puts "\n🎭 Would you like live AI commentary during the slideshow?".white
+        puts "   The AI will generate witty remarks and dad jokes about each slide!".white
         use_commentary = @prompt.yes?("Enable AI Comedy Commentary?")
       end
 
@@ -819,13 +816,13 @@ module ISpeaker
       pause_start_time = nil
       total_pause_duration = 0
 
-      puts "\n🎬 Starting presentation with notes server#{" and AI commentary" if use_commentary}...".cyan
+      puts "\n🎬 Starting presentation with notes server#{" and AI commentary" if use_commentary}...".white
       puts "Navigation: SPACE/→ = Next | ← = Previous | ENTER = IRB Demo | C = Commentary | P = Pause/Resume | ESC = Exit".light_black
       puts "📝 Run 'i_speaker_notes #{port}' in another terminal for speaker notes".yellow
       puts "Tip: Images will prompt ENTER to view | IRB slides launch interactive Ruby | Timer shows elapsed time".light_black
 
       # Give user time to connect notes viewer
-      puts "\n⏳ Waiting for notes viewer connection...".light_blue
+      puts "\n⏳ Waiting for notes viewer connection...".white
       puts "   Press SPACE to start presentation now, or wait 10 seconds".light_black
 
       # Wait for either keypress or timeout
@@ -843,7 +840,7 @@ module ISpeaker
         sleep(0.1)
       end
 
-      puts "⏰ Auto-starting presentation...".light_blue unless key_pressed
+      puts "⏰ Auto-starting presentation...".white unless key_pressed
 
       begin
         loop do
@@ -945,6 +942,12 @@ module ISpeaker
       # Handle image slides specially
       if slide.image_slide? && slide.has_valid_image?
         display_image_slide(slide, index, show_commentary, elapsed_time, timer_paused)
+        return
+      end
+
+      # Handle demo slides specially
+      if slide.demo_slide? && slide.has_demo_code?
+        display_demo_slide(slide, index, show_commentary, elapsed_time, timer_paused)
         return
       end
 
@@ -1160,7 +1163,7 @@ module ISpeaker
       image_text = "📷 #{image_name}"
       image_padding = [(terminal_width - 2 - image_text.length) / 2, 0].max
       right_padding = [terminal_width - 2 - image_padding - image_text.length, 0].max
-      puts "║#{" " * image_padding}#{image_text.light_blue}#{" " * right_padding}║"
+      puts "║#{" " * image_padding}#{image_text.white}#{" " * right_padding}║"
 
       puts "║#{" " * (terminal_width - 2)}║"
 
@@ -1220,6 +1223,255 @@ module ISpeaker
       end
     end
 
+    def display_demo_slide(slide, index, show_commentary, elapsed_time = 0, timer_paused = false)
+      # Get actual terminal dimensions
+      _, terminal_width = get_terminal_size
+      terminal_width -= 2
+
+      # Display header
+      puts "╔#{"═" * (terminal_width - 2)}╗"
+
+      # Timer and slide info in top bar
+      timer_display = format_timer(elapsed_time, timer_paused, index, @talk.slides.length, @talk.duration_minutes)
+      slide_info = "#{index + 1}/#{@talk.slides.length}"
+
+      # Calculate spacing
+      timer_length = timer_display.gsub(/\e\[[0-9;]*m/, "").length
+      slide_info_length = slide_info.length
+      remaining_space = [terminal_width - 2 - timer_length - slide_info_length - 2, 0].max
+
+      puts "║ #{timer_display}#{" " * remaining_space}#{slide_info.light_black} ║"
+      puts "║#{" " * (terminal_width - 2)}║"
+
+      # Title
+      title = slide.title
+      title_padding = [(terminal_width - 2 - title.length) / 2, 0].max
+      right_padding = [terminal_width - 2 - title_padding - title.length, 0].max
+      puts "║#{" " * title_padding}#{title.bold.green}#{" " * right_padding}║"
+
+      puts "║#{" " * (terminal_width - 2)}║"
+
+      # Demo description content (not the actual demo code)
+      slide.content.each do |item|
+        bullet_line = "• #{item}"
+        line_padding = [(terminal_width - 2 - bullet_line.length) / 2, 0].max
+        right_padding = [terminal_width - 2 - line_padding - bullet_line.length, 0].max
+        puts "║#{" " * line_padding}#{bullet_line.light_white}#{" " * right_padding}║"
+      end
+      puts "║#{" " * (terminal_width - 2)}║"
+
+      # Demo indicator
+      demo_text = "🎯 Interactive Ruby Demo Ready"
+      demo_padding = [(terminal_width - 2 - demo_text.length) / 2, 0].max
+      right_padding = [terminal_width - 2 - demo_padding - demo_text.length, 0].max
+      puts "║#{" " * demo_padding}#{demo_text.light_cyan}#{" " * right_padding}║"
+
+      puts "║#{" " * (terminal_width - 2)}║"
+
+      # Instructions
+      instruction = "Press ENTER to run the interactive demo"
+      inst_padding = [(terminal_width - 2 - instruction.length) / 2, 0].max
+      right_padding = [terminal_width - 2 - inst_padding - instruction.length, 0].max
+      puts "║#{" " * inst_padding}#{instruction.yellow.bold}#{" " * right_padding}║"
+
+      puts "╚#{"═" * (terminal_width - 2)}╝"
+
+      # AI Commentary
+      if show_commentary && @ai_available
+        commentary = generate_slide_commentary(slide)
+        if commentary && !commentary.strip.empty?
+          puts "\n┌─ 🎭 AI COMEDY CORNER ─────────────────────────────────────────────────┐".yellow
+          commentary_lines = wrap_text(commentary, terminal_width - 6)
+          commentary_lines.each do |line|
+            padded_line = line.ljust(terminal_width - 6)
+            puts "│ #{padded_line.light_yellow} │".yellow
+          end
+          puts "└───────────────────────────────────────────────────────────────────────┘".yellow
+        end
+      end
+
+      # Navigation hint
+      nav_hint = "ENTER = Run Demo | SPACE/→ Next | ← Previous | P Pause | ESC Exit"
+      nav_padding = [(terminal_width - nav_hint.length) / 2, 0].max
+      puts "\n#{" " * nav_padding}#{nav_hint.light_black}"
+
+      # Wait for user input and potentially run demo
+      key = get_single_keypress
+      if key == :enter
+        system("clear") || system("cls")
+        puts "🎯 Interactive Ruby Demo Session".cyan.bold
+        puts "═" * 60
+        puts ""
+        
+        # Execute each line of demo code with REPL-style display
+        execute_demo_with_repl_style(slide.demo_code)
+        
+        puts "\n" + "═" * 60
+        puts "✅ Demo session completed! Press any key to continue...".green
+        get_single_keypress
+      else
+        # Return the key so the main loop can handle navigation
+        @last_key = key
+      end
+    end
+
+    def execute_demo_with_repl_style(demo_code)
+      puts "🎮 Interactive Ruby Demo - Press ENTER to execute each statement".white
+      puts "─" * 60
+      puts ""
+      
+      # Reset demo context for new demo
+      @demo_context = []
+      
+      # Group lines into logical execution blocks
+      execution_blocks = group_code_into_blocks(demo_code)
+      
+      execution_blocks.each do |block|
+        # Display the block
+        block[:lines].each do |line|
+          display_line = highlight_code_line(line)
+          puts "irb> #{display_line}"
+        end
+        
+        # Always add lines to demo context (including comments)
+        add_lines_to_context(block[:lines])
+        
+        # If it's executable, wait for ENTER and execute
+        if block[:executable]
+          print "Press ENTER to execute...".light_black
+          gets
+          print "\r" + " " * 30 + "\r"  # Clear prompt
+          
+          # Execute this block and show output
+          result = execute_single_block(block[:lines])
+          
+          if result[:output] && !result[:output].strip.empty?
+            result[:output].strip.split("\n").each do |line|
+              puts "=> #{line}".green
+            end
+          end
+          
+          if result[:error]
+            # Check if it's warnings or actual errors
+            has_real_error = false
+            result[:error].strip.split("\n").each do |error_line|
+              if error_line.include?("warning:")
+                puts error_line.yellow  # Warnings in yellow
+              else
+                puts error_line.red    # Errors in red
+                has_real_error = true
+              end
+            end
+            # Only break execution on actual errors, not warnings
+            break if has_real_error
+          end
+        end
+        
+        puts ""  # Spacing between blocks
+      end
+      
+      puts "─" * 60
+      puts "🎯 Demo completed!".green
+    end
+    
+    def group_code_into_blocks(demo_code)
+      blocks = []
+      current_block = { lines: [], executable: false }
+      
+      demo_code.each do |line|
+        if line.strip.empty?
+          # Empty line - finish current block and start new one
+          if current_block[:lines].any?
+            blocks << current_block
+            current_block = { lines: [], executable: false }
+          end
+          next
+        end
+        
+        current_block[:lines] << line
+        current_block[:executable] = true unless line.strip.start_with?("#")
+      end
+      
+      # Add final block if it has content
+      blocks << current_block if current_block[:lines].any?
+      
+      blocks
+    end
+    
+    def highlight_code_line(line)
+      if line.strip.start_with?("#")
+        line.light_black
+      elsif line.strip.match?(/^[a-zA-Z_]\w*\s*=/)
+        line.magenta
+      elsif line.include?("puts") || line.include?("print")
+        line.white
+      elsif line.include?("begin") || line.include?("rescue") || line.include?("end")
+        line.white
+      else
+        line.light_white
+      end
+    end
+    
+    def add_lines_to_context(lines)
+      @demo_context ||= []
+      @demo_context.concat(lines)
+    end
+    
+    def execute_single_block(lines)
+      require "tempfile"
+      require "open3"
+      
+      
+      # Create script that runs all context but only shows output from current block
+      script_lines = []
+      
+      # Check if we need to preserve frozen_string_literal pragma
+      pragma_line = @demo_context.find { |line| line.include?("frozen_string_literal") }
+      if pragma_line
+        script_lines << pragma_line
+        context_without_pragma = @demo_context.reject { |line| line.include?("frozen_string_literal") }
+      else
+        context_without_pragma = @demo_context
+      end
+      
+      script_lines << "require 'stringio'"
+      script_lines << "# Previous context (silent execution)"
+      script_lines << "old_stdout = $stdout"
+      script_lines << "$stdout = StringIO.new"  # Suppress previous output
+      
+      # Add all previous context except current block (excluding pragma if moved to top)
+      previous_lines = context_without_pragma[0...-lines.length]
+      script_lines.concat(previous_lines) if previous_lines.any?
+      
+      script_lines << "$stdout = old_stdout"  # Restore output for current block
+      script_lines << "# Current block (with output)"
+      script_lines.concat(lines)
+      
+      # Create temporary Ruby file
+      Tempfile.create(["demo_block", ".rb"]) do |temp_file|
+        final_script = script_lines.join("\n")
+        temp_file.write(final_script)
+        temp_file.flush
+        
+        
+        # Execute with Ruby and capture output (with warnings enabled)
+        stdout, stderr, status = Open3.capture3("ruby -w #{temp_file.path}")
+        
+        {
+          output: stdout,
+          error: stderr.strip.empty? ? nil : stderr,
+          success: status.success?
+        }
+      end
+    rescue StandardError => e
+      {
+        output: "",
+        error: "Execution error: #{e.message}",
+        success: false
+      }
+    end
+    
+    
     def display_end_screen
       # Get actual terminal dimensions
       terminal_height, terminal_width = get_terminal_size
@@ -1249,7 +1501,7 @@ module ISpeaker
                     when "THE END"
                       line.bold.green
                     when @talk.title
-                      line.light_blue
+                      line.white
                     when "Thank you!"
                       line.yellow
                     else
@@ -1267,6 +1519,47 @@ module ISpeaker
       puts "╚#{"═" * (terminal_width - 2)}╝"
     end
 
+    def start_commentary_generation(slide, slide_key)
+      # Use threads instead of async for DRb compatibility
+      thread = Thread.new do
+        prompt = <<~PROMPT
+          You're a witty AI comedian providing live commentary during a presentation slideshow.#{" "}
+
+          Slide Title: "#{slide.title}"
+          Slide Content: #{slide.content.join(", ")}
+
+          Generate a short, funny commentary (1-2 sentences max) about this slide. Make it:
+          - Clever and witty like a dad joke or pun
+          - Related to the slide content
+          - Family-friendly but sarcastic
+          - Under 80 characters total
+
+          Examples of the style:
+          - "Frozen strings? Sounds like my ex's personality!"
+          - "Memory optimization? My brain could use some of that!"
+          - "Performance improvements? Unlike my coding skills!"
+
+          Just return the joke, nothing else.
+        PROMPT
+
+        # Generate commentary using AI
+        commentary = ai_ask(prompt)
+
+        # Clean up the response
+        commentary = commentary.strip.gsub(/^["']|["']$/, "") if commentary
+        commentary = "#{commentary[0..116]}..." if commentary.length > 120
+
+        @commentary_cache[slide_key] = commentary
+        @commentary_ready = true
+      rescue StandardError => e
+        @commentary_cache[slide_key] = ["Oops, my comedy circuits are frozen!", "404: Joke not found!", "This slide broke my funny bone!"].sample
+        @commentary_ready = true
+      end
+
+      # Return the thread so we can check if it's running
+      thread
+    end
+
     def generate_slide_commentary(slide)
       return nil unless @ai_available
 
@@ -1278,42 +1571,9 @@ module ISpeaker
       # Return loading message if currently generating
       return "🎭 Generating comedy... stand by! 🤖" if @commentary_threads[slide_key]&.alive?
 
-      # Start async generation if not already started
+      # Start thread generation if not already started
       unless @commentary_threads[slide_key]
-        @commentary_threads[slide_key] = Thread.new do
-          prompt = <<~PROMPT
-            You're a witty AI comedian providing live commentary during a presentation slideshow.#{" "}
-
-            Slide Title: "#{slide.title}"
-            Slide Content: #{slide.content.join(", ")}
-
-            Generate a short, funny commentary (1-2 sentences max) about this slide. Make it:
-            - Clever and witty like a dad joke or pun
-            - Related to the slide content
-            - Family-friendly but sarcastic
-            - Under 80 characters total
-
-            Examples of the style:
-            - "Frozen strings? Sounds like my ex's personality!"
-            - "Memory optimization? My brain could use some of that!"
-            - "Performance improvements? Unlike my coding skills!"
-
-            Just return the joke, nothing else.
-          PROMPT
-
-          commentary = ai_ask(prompt)
-          # Clean up the response - sometimes AI adds quotes or explanations
-          commentary = commentary.strip.gsub(/^["']|["']$/, "") if commentary
-          commentary = "#{commentary[0..116]}..." if commentary.length > 120
-
-          @commentary_cache[slide_key] = commentary
-
-          # Signal that commentary is ready
-          @commentary_ready = true
-        rescue StandardError
-          @commentary_cache[slide_key] = ["Oops, my comedy circuits are frozen!", "404: Joke not found!", "This slide broke my funny bone!"].sample
-          @commentary_ready = true
-        end
+        @commentary_threads[slide_key] = start_commentary_generation(slide, slide_key)
       end
 
       # Return fallback while generating
@@ -1531,16 +1791,16 @@ module ISpeaker
       available_viewers = ImageViewer.available_viewers
       if available_viewers.empty?
         puts "\n⚠️  No image viewers found!".yellow
-        puts "Install one of the following for image support:".light_blue
+        puts "Install one of the following for image support:".white
         ImageViewer::VIEWERS.each_value do |config|
-          puts "  • #{config[:command]} - #{config[:description]}".light_blue
+          puts "  • #{config[:command]} - #{config[:description]}".white
         end
         puts "\nRecommended: `brew install viu` or `apt install viu`".green
         @prompt.keypress("\nPress any key to continue...")
         return
       end
 
-      puts "Available image viewers: #{available_viewers.keys.join(", ")}".light_blue
+      puts "Available image viewers: #{available_viewers.keys.join(", ")}".white
       puts "Using: #{ImageViewer.preferred_viewer}".green
 
       # Get image path
@@ -1612,8 +1872,8 @@ module ISpeaker
 
         response = ai_ask_with_spinner(ai_prompt, message: "Generating slide suggestions...")
 
-        puts "\n🎯 AI Suggestions:".blue
-        puts response.light_blue
+        puts "\n🎯 AI Suggestions:".white
+        puts response.white
 
         if @prompt.yes?("\nWould you like to create a slide based on these suggestions?")
           slide = @talk.add_slide
@@ -1654,8 +1914,8 @@ module ISpeaker
         puts slide
 
         if ai_suggestions
-          puts "\n🤖 AI Suggestions:".blue
-          puts ai_suggestions.light_blue
+          puts "\n🤖 AI Suggestions:".white
+          puts ai_suggestions.white
           ai_suggestions = nil # Only show once
         end
 
@@ -1726,8 +1986,8 @@ module ISpeaker
 
         response = ai_ask_with_spinner(ai_prompt, message: "Getting improvement suggestions...")
 
-        puts "\n🎯 AI Improvement Suggestions:".blue
-        puts response.light_blue
+        puts "\n🎯 AI Improvement Suggestions:".white
+        puts response.white
 
         @prompt.keypress("\nPress any key to continue editing...")
       rescue StandardError => e
@@ -1825,13 +2085,13 @@ module ISpeaker
 
     def ai_review_and_fix_structure
       puts "\n🔍 Review and Fix Structure".cyan.bold
-      puts "AI will analyze your presentation structure and offer to fix issues automatically.".light_blue
+      puts "AI will analyze your presentation structure and offer to fix issues automatically.".white
 
       return puts "No slides to review yet.".yellow if @talk.slides.empty?
 
       # Get user input on what to focus on
       puts "\n📋 What would you like the AI to focus on?".yellow
-      puts "Select at least one area (use SPACE to select, ENTER to confirm):".light_blue
+      puts "Select at least one area (use SPACE to select, ENTER to confirm):".white
 
       focus_areas = []
       while focus_areas.empty?
@@ -1853,7 +2113,7 @@ module ISpeaker
 
         puts "\n⚠️  Please select at least one area to analyze.".yellow
         unless @prompt.yes?("Try again?")
-          puts "Analysis cancelled.".light_blue
+          puts "Analysis cancelled.".white
           return
         end
       end
@@ -1867,7 +2127,7 @@ module ISpeaker
 
       puts "\n🤖 Analyzing presentation structure...".yellow
       puts "   Focus areas: #{focus_areas.map(&:to_s).join(", ")}"
-      puts "   Looking for fixes and improvements...".light_blue
+      puts "   Looking for fixes and improvements...".white
 
       begin
         # Step 1: Get text-based analysis first
@@ -1882,8 +2142,8 @@ module ISpeaker
         end
 
         # Display the text analysis
-        puts "\n🔍 Structure Analysis:".blue.bold
-        puts text_analysis.light_blue
+        puts "\n🔍 Structure Analysis:".white.bold
+        puts text_analysis.white
 
         # Ask if user wants to proceed with auto-fixes
         return unless @prompt.yes?("\n🔧 Would you like me to generate and apply fixes automatically?")
@@ -1899,12 +2159,12 @@ module ISpeaker
           return
         end
 
-        puts "   Parsing fix response...".light_blue
+        puts "   Parsing fix response...".white
         issues_and_fixes = parse_structure_analysis(json_response)
 
         if issues_and_fixes && issues_and_fixes["fixes"]&.any?
           puts "\n🔄 Auto-Fix Mode Activated".cyan.bold
-          puts "I'll automatically apply fixes and re-analyze for continuous improvement.".light_blue
+          puts "I'll automatically apply fixes and re-analyze for continuous improvement.".white
 
           # Iterative improvement loop
           iteration = 1
@@ -1917,11 +2177,11 @@ module ISpeaker
             fixes_to_apply = issues_and_fixes["fixes"].select { |fix| can_auto_apply?(fix) }
 
             if fixes_to_apply.empty?
-              puts "No more auto-applicable fixes found.".light_blue
+              puts "No more auto-applicable fixes found.".white
               break
             end
 
-            puts "Found #{fixes_to_apply.length} fixes to apply...".light_blue
+            puts "Found #{fixes_to_apply.length} fixes to apply...".white
             fixes_applied = apply_structure_fixes_auto(fixes_to_apply)
             total_fixes_applied += fixes_applied
 
@@ -1939,8 +2199,8 @@ module ISpeaker
             new_issues_and_fixes = parse_structure_analysis(json_response)
 
             if new_issues_and_fixes && new_issues_and_fixes["fixes"]&.any?
-              puts "\n📊 New Analysis Results:".blue
-              puts "Found #{new_issues_and_fixes["fixes"].length} additional improvements".light_blue
+              puts "\n📊 New Analysis Results:".white
+              puts "Found #{new_issues_and_fixes["fixes"].length} additional improvements".white
               issues_and_fixes = new_issues_and_fixes
             else
               puts "\n✅ No more improvements needed!".green
@@ -1949,8 +2209,8 @@ module ISpeaker
           end
 
           puts "\n🎉 Auto-Fix Complete!".green.bold
-          puts "Total fixes applied: #{total_fixes_applied}".blue
-          puts "Iterations completed: #{iteration}".blue
+          puts "Total fixes applied: #{total_fixes_applied}".white
+          puts "Iterations completed: #{iteration}".white
 
           # Show final structure overview
           if total_fixes_applied.positive? && @prompt.yes?("\nWould you like to see the improved structure?")
@@ -1958,7 +2218,7 @@ module ISpeaker
           end
         else
           puts "\n⚠️  No applicable fixes found in the response.".yellow
-          puts "The analysis was helpful, but no automatic fixes could be generated.".light_blue
+          puts "The analysis was helpful, but no automatic fixes could be generated.".white
         end
       rescue StandardError => e
         puts "❌ Analysis failed: #{e.message}".red
@@ -2213,7 +2473,7 @@ module ISpeaker
     end
 
     def display_structure_analysis(analysis)
-      puts "\n📊 Structure Analysis Results:".blue.bold
+      puts "\n📊 Structure Analysis Results:".white.bold
 
       if analysis["issues_found"]&.any?
         puts "\n🔍 Issues Found:".red.bold
@@ -2226,10 +2486,10 @@ module ISpeaker
                            end
 
           puts "\n#{i + 1}. #{issue["description"]}".send(severity_color)
-          puts "   Category: #{issue["category"].capitalize}".light_blue
+          puts "   Category: #{issue["category"].capitalize}".white
           puts "   Severity: #{issue["severity"].upcase}".send(severity_color)
-          puts "   Affects slides: #{issue["affected_slides"]&.join(", ") || "Multiple"}".light_blue
-          puts "   Impact: #{issue["impact"]}".light_blue if issue["impact"]
+          puts "   Affects slides: #{issue["affected_slides"]&.join(", ") || "Multiple"}".white
+          puts "   Impact: #{issue["impact"]}".white if issue["impact"]
         end
       end
 
@@ -2237,16 +2497,16 @@ module ISpeaker
         puts "\n🛠️  Suggested Fixes:".green.bold
         analysis["fixes"].each_with_index do |fix, i|
           puts "\n#{i + 1}. #{fix["description"]}".green
-          puts "   Type: #{fix["type"].gsub("_", " ").capitalize}".light_blue
-          puts "   Action: #{fix["action"]}".light_blue
-          puts "   Position: #{fix["position"]}".light_blue if fix["position"]
+          puts "   Type: #{fix["type"].gsub("_", " ").capitalize}".white
+          puts "   Action: #{fix["action"]}".white
+          puts "   Position: #{fix["position"]}".white if fix["position"]
         end
       end
 
       return unless analysis["overall_assessment"]
 
       puts "\n📋 Overall Assessment:".cyan.bold
-      puts analysis["overall_assessment"].light_blue
+      puts analysis["overall_assessment"].white
     end
 
     def can_auto_apply?(fix)
@@ -2258,7 +2518,7 @@ module ISpeaker
       fixes_applied = 0
 
       fixes.each_with_index do |fix, i|
-        puts "\n#{i + 1}. #{fix["description"]}".blue
+        puts "\n#{i + 1}. #{fix["description"]}".white
 
         begin
           # Parse fix type (handle compound types)
@@ -2295,7 +2555,7 @@ module ISpeaker
       fixes_applied = 0
 
       fixes.each_with_index do |fix, i|
-        puts "\n#{i + 1}. #{fix["description"]}".blue
+        puts "\n#{i + 1}. #{fix["description"]}".white
 
         begin
           # Parse fix type (handle compound types)
@@ -2331,12 +2591,12 @@ module ISpeaker
         auto_save
 
         puts "\n🎉 Applied #{fixes_applied}/#{fixes.length} fixes successfully!".green.bold
-        puts "Your presentation structure has been improved.".light_blue
+        puts "Your presentation structure has been improved.".white
 
         show_talk_overview if @prompt.yes?("\nWould you like to review the updated structure?")
       else
         puts "\n⚠️  No fixes could be applied automatically.".yellow
-        puts "Please review the suggestions and make manual changes.".light_blue
+        puts "Please review the suggestions and make manual changes.".white
       end
     end
 
@@ -2448,19 +2708,19 @@ module ISpeaker
       # This would require more complex parsing of the fix action
       # For now, just notify that manual reordering is needed
       puts "   ⚠️  Slide reordering requires manual action".yellow
-      puts "   Suggestion: #{fix["action"]}".light_blue
+      puts "   Suggestion: #{fix["action"]}".white
     end
 
     def apply_split_slide_fix(fix)
       # Complex operation - notify user to do manually
       puts "   ⚠️  Slide splitting requires manual action".yellow
-      puts "   Suggestion: #{fix["action"]}".light_blue
+      puts "   Suggestion: #{fix["action"]}".white
     end
 
     def apply_merge_slides_fix(fix)
       # Complex operation - notify user to do manually
       puts "   ⚠️  Slide merging requires manual action".yellow
-      puts "   Suggestion: #{fix["action"]}".light_blue
+      puts "   Suggestion: #{fix["action"]}".white
     end
 
     def extract_slide_number(text)
@@ -2493,32 +2753,32 @@ module ISpeaker
 
       case fix["type"]
       when /reorder|rearrange/i
-        puts "   💡 Manual steps: Use 'Reorder slides' from the main menu".light_blue
-        puts "      Suggestion: #{fix["action"]}".light_blue
+        puts "   💡 Manual steps: Use 'Reorder slides' from the main menu".white
+        puts "      Suggestion: #{fix["action"]}".white
       when /split|divide/i
-        puts "   💡 Manual steps: Edit the slide and break content into multiple slides".light_blue
-        puts "      Suggestion: #{fix["action"]}".light_blue
+        puts "   💡 Manual steps: Edit the slide and break content into multiple slides".white
+        puts "      Suggestion: #{fix["action"]}".white
       when /merge|combine/i
-        puts "   💡 Manual steps: Copy content from multiple slides into one".light_blue
-        puts "      Suggestion: #{fix["action"]}".light_blue
+        puts "   💡 Manual steps: Copy content from multiple slides into one".white
+        puts "      Suggestion: #{fix["action"]}".white
       when /interactive|engagement/i
-        puts "   💡 Manual steps: Edit slides to add interactive elements".light_blue
-        puts "      Ideas: Add Q&A prompts, polls, or exercises".light_blue
+        puts "   💡 Manual steps: Edit slides to add interactive elements".white
+        puts "      Ideas: Add Q&A prompts, polls, or exercises".white
       when /example|case.?study/i
-        puts "   💡 Manual steps: Add new slides with real-world examples".light_blue
-        puts "      Use 'Create new slide' and add practical examples".light_blue
+        puts "   💡 Manual steps: Add new slides with real-world examples".white
+        puts "      Use 'Create new slide' and add practical examples".white
       else
-        puts "   💡 Manual steps required:".light_blue
-        puts "      #{fix["action"]}".light_blue
+        puts "   💡 Manual steps required:".white
+        puts "      #{fix["action"]}".white
 
         # Try to suggest the best approach based on the description
         description = fix["description"].downcase
         if description.include?("add") || description.include?("create")
-          puts "      → Consider using 'Create new slide' from the main menu".light_blue
+          puts "      → Consider using 'Create new slide' from the main menu".white
         elsif description.include?("edit") || description.include?("modify") || description.include?("update")
-          puts "      → Use 'Edit existing slide' from the main menu".light_blue
+          puts "      → Use 'Edit existing slide' from the main menu".white
         elsif description.include?("remove") || description.include?("delete")
-          puts "      → Use 'Delete slide' from the main menu".light_blue
+          puts "      → Use 'Delete slide' from the main menu".white
         end
       end
     end
@@ -2531,8 +2791,8 @@ module ISpeaker
 
         response = ai_ask_with_spinner(tips_prompt, message: "Generating presentation tips...")
 
-        puts "\n🎯 Presentation Tips:".blue
-        puts response.light_blue
+        puts "\n🎯 Presentation Tips:".white
+        puts response.white
 
         @prompt.keypress("\nPress any key to continue...")
       rescue StandardError => e
@@ -2542,7 +2802,7 @@ module ISpeaker
 
     def integrate_web_content
       puts "\n🌐 Integrate Web Content".cyan.bold
-      puts "Fetch content from a website and incorporate it into your slides.".light_blue
+      puts "Fetch content from a website and incorporate it into your slides.".white
 
       # Get URL from user
       url = @prompt.ask("\nEnter the URL of the website:")
@@ -2560,14 +2820,14 @@ module ISpeaker
       end
 
       puts "✅ Content fetched successfully!".green
-      puts "📄 Content length: #{result[:content].length} characters".light_blue
+      puts "📄 Content length: #{result[:content].length} characters".white
 
       # Show preview of content
       preview = result[:content][0..500]
       preview += "..." if result[:content].length > 500
 
-      puts "\n📋 Content Preview:".blue
-      puts preview.light_blue
+      puts "\n📋 Content Preview:".white
+      puts preview.white
 
       unless @prompt.yes?("\nWould you like to proceed with integrating this content?")
         puts "Integration cancelled.".yellow
@@ -2670,7 +2930,7 @@ module ISpeaker
       # Step 1: AI analyzes which slides would benefit from web content
       analysis_prompt = build_slide_matching_prompt(web_content, source_url)
 
-      puts "🔍 Finding slides that match the web content...".light_blue
+      puts "🔍 Finding slides that match the web content...".white
       matching_response = ai_ask_with_spinner(analysis_prompt, message: "Analyzing slide relevance...")
 
       if matching_response.nil? || matching_response.strip.empty?
@@ -2682,8 +2942,8 @@ module ISpeaker
       slide_matches = parse_slide_matching_response(matching_response)
 
       if slide_matches.empty?
-        puts "\n📋 Analysis Results:".blue
-        puts matching_response.light_blue
+        puts "\n📋 Analysis Results:".white
+        puts matching_response.white
         puts "\n⚠️  No highly relevant slides found for this content.".yellow
 
         choice = @prompt.select("What would you like to do?", [
@@ -2703,13 +2963,13 @@ module ISpeaker
       end
 
       # Display the AI recommendations
-      puts "\n🎯 AI Found Relevant Slides:".blue.bold
+      puts "\n🎯 AI Found Relevant Slides:".white.bold
       slide_matches.each_with_index do |match, i|
         slide = @talk.slides[match[:slide_index]]
         puts "\n#{i + 1}. #{slide.display_summary}".green
-        puts "   Relevance: #{match[:relevance]}".light_blue
-        puts "   Why: #{match[:reason]}".light_blue
-        puts "   Suggested enhancement: #{match[:enhancement]}".cyan
+        puts "   Relevance: #{match[:relevance]}".white
+        puts "   Why: #{match[:reason]}".white
+        puts "   Suggested enhancement: #{match[:enhancement]}".white
       end
 
       unless @prompt.yes?("\n🚀 Apply these enhancements automatically?")
@@ -2723,7 +2983,7 @@ module ISpeaker
       slide_matches.each do |match|
         slide = @talk.slides[match[:slide_index]]
 
-        puts "\n🔧 Enhancing: #{slide.title}".blue
+        puts "\n🔧 Enhancing: #{slide.title}".white
 
         begin
           update_prompt = <<~PROMPT
@@ -2990,7 +3250,7 @@ module ISpeaker
 
     def ai_fix_mode
       puts "\n🔧 AI Fix Mode - Expand Your Presentation".cyan.bold
-      puts "This mode helps you add multiple slides to reach the appropriate length for your talk.".light_blue
+      puts "This mode helps you add multiple slides to reach the appropriate length for your talk.".white
 
       # Calculate recommended slide count
       recommended_slides = calculate_recommended_slides(@talk.duration_minutes)
@@ -3004,7 +3264,7 @@ module ISpeaker
 
       if current_slides.zero?
         puts "\n⚠️  No slides yet. Please create some slides first.".yellow
-        puts "   Use 'Create complete talk with AI' from the main menu.".light_blue
+        puts "   Use 'Create complete talk with AI' from the main menu.".white
         return
       end
 
@@ -3049,7 +3309,7 @@ module ISpeaker
     end
 
     def ai_add_slides_at_positions
-      puts "\n📍 Add Slides at Specific Positions".blue
+      puts "\n📍 Add Slides at Specific Positions".white
 
       # Show current structure
       puts "\nCurrent slide structure:".bold
@@ -3131,7 +3391,7 @@ module ISpeaker
     end
 
     def ai_expand_sections
-      puts "\n📈 Expand Specific Sections".blue
+      puts "\n📈 Expand Specific Sections".white
 
       # Group slides into sections
       puts "\nWhich section needs expansion?".bold
@@ -3222,7 +3482,7 @@ module ISpeaker
     end
 
     def ai_fill_gaps
-      puts "\n🔗 Fill Gaps Between Slides".blue
+      puts "\n🔗 Fill Gaps Between Slides".white
 
       # Identify potential gaps
       gaps = []
@@ -3322,8 +3582,8 @@ module ISpeaker
         return
       end
 
-      puts "\n🚀 Generating Complete Slide Set".blue
-      puts "Current: #{current_count} slides → Target: #{target_count} slides".light_blue
+      puts "\n🚀 Generating Complete Slide Set".white
+      puts "Current: #{current_count} slides → Target: #{target_count} slides".white
 
       return unless @prompt.yes?("\nThis will add #{target_count - current_count} slides. Continue?")
 
@@ -3398,7 +3658,7 @@ module ISpeaker
 
             # Show progress
             if (added_count % 5).zero?
-              puts "   Progress: #{added_count}/#{target_count - current_count} slides added...".light_blue
+              puts "   Progress: #{added_count}/#{target_count - current_count} slides added...".white
             end
           end
 
@@ -3408,7 +3668,7 @@ module ISpeaker
           auto_save
 
           puts "\n🎉 Presentation expanded to #{@talk.slides.length} slides!".green.bold
-          puts "   Ready for a #{@talk.duration_minutes}-minute presentation".blue
+          puts "   Ready for a #{@talk.duration_minutes}-minute presentation".white
 
           show_talk_overview if @prompt.yes?("\nWould you like to review the new structure?")
         else
@@ -3432,7 +3692,7 @@ module ISpeaker
       return puts "No slides to fact-check yet.".yellow if @talk.slides.empty?
 
       puts "\n🔍 Fact-Check Slides".cyan.bold
-      puts "AI will verify claims in your slides using Google search and web sources.".light_blue
+      puts "AI will verify claims in your slides using Google search and web sources.".white
 
       # Option to check all slides or select specific ones
       check_mode = @prompt.select("What would you like to fact-check?", [
@@ -3457,7 +3717,7 @@ module ISpeaker
 
       slides_to_check.each_with_index do |slide_index, _i|
         slide = @talk.slides[slide_index]
-        puts "\n📍 Checking slide #{slide_index + 1}/#{@talk.slides.length}: #{slide.title}".blue
+        puts "\n📍 Checking slide #{slide_index + 1}/#{@talk.slides.length}: #{slide.title}".white
 
         # Step 1: Extract claims from the slide
         claims = extract_claims_from_slide(slide)
@@ -3467,7 +3727,7 @@ module ISpeaker
           next
         end
 
-        puts "   Found #{claims.length} claims to verify...".light_blue
+        puts "   Found #{claims.length} claims to verify...".white
 
         # Step 2: Search for each claim using Serper
         search_results = search_claims_with_serper(claims)
@@ -3533,7 +3793,7 @@ module ISpeaker
     end
 
     def extract_claims_from_slide(slide)
-      puts "   🔍 Extracting verifiable claims...".light_blue
+      puts "   🔍 Extracting verifiable claims...".white
 
       extraction_prompt = <<~PROMPT
         Extract verifiable factual claims from this slide content:
@@ -3574,12 +3834,12 @@ module ISpeaker
     end
 
     def search_claims_with_serper(claims)
-      puts "   🌐 Searching Google for verification...".light_blue
+      puts "   🌐 Searching Google for verification...".white
 
       search_results = []
 
       claims.each_with_index do |claim, i|
-        puts "     Claim #{i + 1}: #{claim[0..50]}...".light_blue
+        puts "     Claim #{i + 1}: #{claim[0..50]}...".white
 
         result = @serper_client.search_for_fact_checking([claim])
         search_results.concat(result) if result.any?
@@ -3592,7 +3852,7 @@ module ISpeaker
     end
 
     def fetch_web_evidence(search_results)
-      puts "   📄 Fetching web evidence...".light_blue
+      puts "   📄 Fetching web evidence...".white
 
       web_evidence = []
       web_fetcher = WebContentFetcher.new
@@ -3623,7 +3883,7 @@ module ISpeaker
     end
 
     def analyze_claims_with_ai(slide, claims, search_results, web_evidence)
-      puts "   🤖 AI analyzing evidence...".light_blue
+      puts "   🤖 AI analyzing evidence...".white
 
       analysis_prompt = build_fact_check_analysis_prompt(slide, claims, search_results, web_evidence)
 
@@ -3836,7 +4096,7 @@ module ISpeaker
     end
 
     def display_fact_check_result(slide, result, checked_urls = [], _web_evidence = [])
-      puts "\n   📊 Fact-Check Results for: #{slide.title}".blue.bold
+      puts "\n   📊 Fact-Check Results for: #{slide.title}".white.bold
 
       # Overall verdict with color coding
       verdict_color = case result[:overall_verdict].downcase
@@ -3867,7 +4127,7 @@ module ISpeaker
 
       # Recommendations
       if result[:recommendations].any?
-        puts "\n   💡 Recommendations:".cyan
+        puts "\n   💡 Recommendations:".white
         result[:recommendations].each do |rec|
           puts "   • #{rec}"
         end
@@ -3875,7 +4135,7 @@ module ISpeaker
 
       # Display checked URLs for transparency
       if checked_urls.any?
-        puts "\n   🔗 Sources Checked:".light_blue
+        puts "\n   🔗 Sources Checked:".white
         checked_urls.first(5).each do |url_info|
           puts "   • #{url_info[:title]}"
           puts "     #{url_info[:url]}".light_black
@@ -3883,7 +4143,7 @@ module ISpeaker
         puts "   ... and #{checked_urls.length - 5} more sources".light_black if checked_urls.length > 5
       end
 
-      puts "\n   📝 Summary: #{result[:summary]}".light_blue if result[:summary]
+      puts "\n   📝 Summary: #{result[:summary]}".white if result[:summary]
     end
 
     def display_fact_check_summary(results)
@@ -3946,7 +4206,7 @@ module ISpeaker
 
       problematic_slides.each do |slide_result|
         slide = slide_result[:slide]
-        puts "\n📍 Reviewing: #{slide.title}".blue
+        puts "\n📍 Reviewing: #{slide.title}".white
 
         display_fact_check_result(slide, slide_result[:result], slide_result[:checked_urls],
                                   slide_result[:web_evidence])
@@ -3973,7 +4233,7 @@ module ISpeaker
     end
 
     def add_citation_notes(slide, fact_check_result)
-      puts "\n📚 Adding citation suggestions to speaker notes...".blue
+      puts "\n📚 Adding citation suggestions to speaker notes...".white
 
       citation_notes = "\n\n--- FACT-CHECK CITATIONS ---\n"
       citation_notes += "Fact-checked on #{Time.now.strftime("%Y-%m-%d")}\n"
@@ -4000,7 +4260,7 @@ module ISpeaker
     end
 
     def improve_slide_with_ai(slide, fact_check_result, checked_urls, web_evidence)
-      puts "\n🤖 AI improving slide based on fact-check results...".blue
+      puts "\n🤖 AI improving slide based on fact-check results...".white
 
       improvement_prompt = build_slide_improvement_prompt(slide, fact_check_result, checked_urls, web_evidence)
 
@@ -4029,7 +4289,7 @@ module ISpeaker
       end
 
       puts "\n📄 Updated Notes:" if improvement_data["improved_notes"]
-      puts "   #{improvement_data["improved_notes"][0..200]}...".light_blue
+      puts "   #{improvement_data["improved_notes"][0..200]}...".white
 
       if improvement_data["changes_made"]&.any?
         puts "\n🔄 Changes Made:".yellow
@@ -4038,7 +4298,7 @@ module ISpeaker
         end
       end
 
-      puts "\n🎯 AI Confidence: #{improvement_data["confidence"]}".cyan
+      puts "\n🎯 AI Confidence: #{improvement_data["confidence"]}".white
 
       # Ask user to confirm changes
       if @prompt.yes?("\nApply these improvements to the slide?")
@@ -4052,7 +4312,7 @@ module ISpeaker
 
         # Ask if user wants to re-run fact-check on improved slide
         if @prompt.yes?("Re-run fact-check on the improved slide?")
-          puts "\n🔄 Re-checking improved slide...".blue
+          puts "\n🔄 Re-checking improved slide...".white
 
           # Re-run fact-check on the improved slide
           claims = extract_claims_from_slide(slide)
@@ -4083,7 +4343,7 @@ module ISpeaker
         JSON.parse(json_content)
       rescue JSON::ParserError => e
         puts "⚠️  JSON parsing error: #{e.message}".yellow
-        puts "   Attempting AI-assisted JSON correction...".light_blue
+        puts "   Attempting AI-assisted JSON correction...".white
 
         # Try to fix the JSON using AI
         corrected_json = fix_malformed_json_with_ai(json_content, e.message)
@@ -4099,7 +4359,7 @@ module ISpeaker
         end
 
         # Final fallback: try simple fixes
-        puts "   Trying simple automatic fixes...".light_blue
+        puts "   Trying simple automatic fixes...".white
         simple_fixed = apply_simple_json_fixes(json_content)
 
         if simple_fixed
@@ -4460,7 +4720,7 @@ module ISpeaker
         puts "No Ruby code found in this slide.".yellow
       end
 
-      puts "\n🎬 Press any key to return to slideshow...".cyan
+      puts "\n🎬 Press any key to return to slideshow...".white
       get_single_keypress
     end
 

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require_relative "slide"
 
 module ISpeaker
   class Talk
@@ -130,12 +131,13 @@ module ISpeaker
       )
 
       data[:slides]&.each do |slide_data|
-        slide = Slide.new(
+        slide = ISpeaker::Slide.new(
           title: slide_data[:title],
           content: slide_data[:content],
           notes: slide_data[:notes],
           image_path: slide_data[:image_path],
-          slide_type: slide_data[:slide_type] || :content
+          slide_type: slide_data[:slide_type] || :content,
+          demo_code: slide_data[:demo_code]
         )
         talk.slides << slide
       end

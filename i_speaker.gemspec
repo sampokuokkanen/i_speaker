@@ -35,6 +35,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Uncomment to register a new dependency of your gem
+  spec.add_dependency "async", "~> 2.0"
+  spec.add_dependency "async-http", "~> 0.75"
   spec.add_dependency "colorize", "~> 0.8"
   spec.add_dependency "nokogiri", "~> 1.0"
   spec.add_dependency "ruby_llm", "~> 1.3"

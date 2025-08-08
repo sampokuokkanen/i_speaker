@@ -25,16 +25,18 @@ module ISpeaker
 
       # Start DRuby service
       DRb.start_service(@server_uri, front_object)
-      @server_thread = Thread.new { DRb.thread.join }
+      @server_thread = Thread.new do
+        DRb.thread.join
+      end
 
       # Give the server a moment to fully initialize
       sleep(0.5)
 
       puts "\n🌐 Notes server started on #{@server_uri}".green
-      puts "   Run 'i_speaker_notes #{port}' in another terminal to view notes".light_blue
+      puts "   Run 'i_speaker_notes #{port}' in another terminal to view notes".white
 
-      # Return the front object that clients will connect to
-      DRb.front
+      # Return this instance (the front object) that clients will connect to
+      self
     rescue StandardError => e
       puts "⚠️  Could not start notes server: #{e.message}".yellow
       nil
@@ -42,7 +44,7 @@ module ISpeaker
 
     def stop_server
       DRb.stop_service if DRb.thread
-      @server_thread&.kill
+      @server_thread&.kill if @server_thread&.alive?
     end
 
     # Called by main presentation to update current slide

@@ -142,7 +142,7 @@
         "",
         "**After Ruby 2.1**: Deduplication makes them identical",
         "",
-        "```ruby",
+        "```ruby", 
         "# Ruby 2.1+ - Expected behavior",
         "\"hello\".freeze == \"hello\".freeze  # => true",
         "\"hello\".freeze.object_id == \"hello\".freeze.object_id  # => true",
@@ -156,7 +156,7 @@
       "title": "The Magic Comment Origin Story",
       "content": [
         "**October 2013**: Akira Tanaka proposes frozen_string_literal",
-        "**August 2015**: Akira Matsuda revives the discussion",
+        "**August 2015**: Akira Matsuda revives the discussion", 
         "**September 2015**: Matz approves for Ruby 2.3",
         "**Ruby 2.3 (2015)**: Magic comment implemented",
         "",
@@ -336,10 +336,10 @@
         "# Method 1: Unary plus (Ruby 2.3+)",
         "copy1 = +str            # Concise, returns mutable copy",
         "",
-        "# Method 2: String concatenation",
+        "# Method 2: String concatenation", 
         "copy2 = str + ''        # Fast, idiomatic",
         "",
-        "# Method 3: Duplication",
+        "# Method 3: Duplication",  
         "copy3 = str.dup         # Clear intent, now fast in 3.3+",
         "",
         "# Method 4: Cloning",
@@ -374,7 +374,7 @@
         "**Why?** String concatenation had better optimizations",
         "",
         "Ruby 3.3 fixed this imbalance:",
-        "• Optimized String#dup implementation",
+        "• Optimized String#dup implementation", 
         "• Now `str.dup` performs as well as `str + ''`",
         "• Better support for explicit mutability patterns"
       ],
@@ -427,6 +427,17 @@
       "slide_type": "content"
     },
     {
+      "title": "Impact on Everyday Rubyists: The Basics",
+      "content": [
+        "Code with `# frozen_string_literal: true` is unaffected – literals were already frozen.",
+        "Without the pragma, strings warn on mutation then become mutable",
+        "Common idioms (`dup if frozen?`) still work fine"
+      ],
+      "notes": "If you already use the magic comment, nothing changes. Otherwise you'll get warnings on mutation.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
       "title": "Impact on Everyday Rubyists: Watch Out!",
       "content": [
         "⚠️ GOTCHA: Chilled string as Hash key bug",
@@ -460,7 +471,7 @@
       "content": [
         "Ruby's three-phase approach:",
         "• **R0** (Ruby 3.3): Chilled strings + warnings",
-        "• **R1** (Future): Warnings always visible",
+        "• **R1** (Future): Warnings always visible",  
         "• **R2** (Ruby 4.0+): Frozen by default",
         "",
         "🎯 **The reality**: Timeline is flexible by design",
@@ -478,7 +489,7 @@
         "**The \"f\" suffix proposal (Ruby Issue #8579):**",
         "```ruby",
         "name = \"Hello World\"f      # Frozen string",
-        "greeting = \"Welcome\"f      # Frozen string",
+        "greeting = \"Welcome\"f      # Frozen string", 
         "```",
         "",
         "vs. current approach:",
@@ -499,7 +510,7 @@
         "putstring \"hello world\"  # Creates new object each time",
         "```",
         "",
-        "**F-suffix string**: `\"hello world\"f`",
+        "**F-suffix string**: `\"hello world\"f`", 
         "```",
         "putobject \"hello world\"  # Reuses same frozen object",
         "```",
@@ -535,7 +546,7 @@
         "**1. Add the magic comment to new files:**",
         "`# frozen_string_literal: true`",
         "",
-        "**2. When you need mutable strings:**",
+        "**2. When you need mutable strings:**", 
         "• Use `str.dup` (optimized in Ruby 3.3+)",
         "• Or use `str + ''` for concatenation",
         "",
@@ -579,6 +590,30 @@
       "slide_type": "content"
     },
     {
+      "title": "Ruby Core Decision Timeline",
+      "content": [
+        "The plan to make literals frozen by default in Ruby 3.0 was abandoned due to backward-compatibility concerns.",
+        "Instead, the core team agreed on a staged migration: R0 (e.g. Ruby 3.4) adds deprecation warnings, R1 (later 3.x) shows warnings unconditionally, and R2 (Ruby 4.0) eventually freezes literals by default.",
+        "However, Matz has stated that Ruby 4.0 (target ~2025) will still *not* enable default frozen literals yet.",
+        "This cautious, decade-long process reflects the community’s emphasis on compatibility and a smooth transition."
+      ],
+      "notes": "Summary: Ruby 2.3’s default-change was delayed, and the R0/R1/R2 timeline was set. Even so, default freeze in 4.0 is postponed, pending broad adoption and testing.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "The Future of Frozen String Literals",
+      "content": [
+        "The long-term plan is to make frozen string literals the default (likely around Ruby 4.0).",
+        "Eventually the magic comment will be unnecessary. Deprecation periods ensure a smooth transition.",
+        "Gem maintainers should audit their code: add the pragma where safe, or avoid mutating literals in libraries.",
+        "These changes will allow further optimizations under the hood (e.g. static string internals, CoW mechanisms)."
+      ],
+      "notes": "Looking ahead: prepare for Ruby 4.0 default. The ecosystem needs to opt-in now to minimize friction. In return we get faster strings across the board.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
       "title": "The Future of Frozen String Literals (Specs)",
       "content": [
         "In Ruby 3.4+, the scheme is: R0 = warnings on mutation if no pragma, R1 = warnings always, R2 = freeze by default.",
@@ -587,6 +622,18 @@
         "The final switch (default freeze) will come in a future release (likely Ruby 4.0), after a full deprecation cycle."
       ],
       "notes": "Specifically: Ruby 3.4 uses `putchilledstring` by default and warns on mutation:​. Further steps (R1/R2) will follow in 3.5+ and Ruby 4.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "The Impact on Symbol Strings",
+      "content": [
+        "Symbols themselves are immutable as always. But converting symbols to strings (`#to_s`) now plays better with frozen-literal strategy.",
+        "Ruby 3.4 implemented that `Symbol#to_s` returns a chilled string, reducing string allocations:​.",
+        "This change was driven by usage patterns (often `to_s` on symbols in hot paths) and gives performance win without changing APIs.",
+        "In practice, you shouldn’t need to change code: `:foo.to_s` behaves as before, but now yields a string that will warn if mutated."
+      ],
+      "notes": "A quick note on symbols: to reduce allocations, Ruby will mark the string from `Symbol#to_s` as chilled. No direct action needed in your code yet.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -603,6 +650,19 @@
       "slide_type": "content"
     },
     {
+      "title": "Migration Guide: Preparing Your Codebase",
+      "content": [
+        "Step 1: Enable warnings in development (Warning[:deprecated] = true)",
+        "Step 2: Use RuboCop to add # frozen_string_literal: true automatically",
+        "Step 3: Fix warnings by adding .dup or +'' where mutation is needed",
+        "Step 4: Test thoroughly - especially edge cases with Hash keys",
+        "Step 5: Monitor performance and memory usage improvements"
+      ],
+      "notes": "This addresses the critical gap identified in the analysis. Make this actionable with specific commands and tools. Emphasize that this is a gradual process that can be done incrementally. Provide a clear path forward for attendees to apply this knowledge.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
       "title": "RuboCop's Strong Opinions 💪",
       "content": [
         "RuboCop really doesn't like `frozen_string_literal: false`:",
@@ -610,7 +670,7 @@
         "```ruby",
         "# This triggers a warning!",
         "# frozen_string_literal: false",
-        "# ⚠️ Style/FrozenStringLiteralComment:",
+        "# ⚠️ Style/FrozenStringLiteralComment:", 
         "#    Frozen string literal comment must be set to `true`",
         "```",
         "",
@@ -706,6 +766,18 @@
       "slide_type": "content"
     },
     {
+      "title": "Conclusion (Part 1): Recap and Reflection",
+      "content": [
+        "We summarized the history: Ruby 2.3’s frozen-string pragma through Ruby 3.3’s chilled-strings change.",
+        "Frozen literals reduce GC and speed up code in many cases.",
+        "Chilled strings provide a gentle migration (warn vs error) to default immutability.",
+        "Key takeaway: use frozen literals now and explicitly handle mutability to prepare for future Ruby defaults."
+      ],
+      "notes": "Recap: we covered the key points and rationale behind frozen strings and chilled strings, and why it matters for performance and safety.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
       "title": "Conclusion (Part 2): The Future of Ruby Strings",
       "content": [
         "The likely future: Ruby 4.0 will default to frozen literals, as envisioned years ago.",
@@ -714,6 +786,15 @@
         "Until then, frozen literals remain a great tool for performance today; thank you for chilling with me!"
       ],
       "notes": "Final thoughts: strings in Ruby are becoming more efficient. The switch to default immutability is coming, and that brings opportunities for speedups and new features.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "Final Q&A Session (Open Mic)",
+      "content": [
+        "Any remaining questions? Let's discuss and clarify anything from this talk."
+      ],
+      "notes": "",
       "image_path": null,
       "slide_type": "content"
     },
@@ -821,7 +902,7 @@
         "",
         "🐦 **@KuokkanenSampo**",
         "",
-        "• Evil Martians Japan updates",
+        "• Evil Martians Japan updates", 
         "• Occasionally Ruby tips (maybe)",
         "• Pictures of my Honda Beat"
       ],
@@ -881,5 +962,5 @@
     }
   ],
   "estimated_duration": 127,
-  "completion_status": "59/59 slides completed"
+  "completion_status": "67/67 slides completed"
 }

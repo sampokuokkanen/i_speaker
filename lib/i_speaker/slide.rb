@@ -2,14 +2,15 @@
 
 module ISpeaker
   class Slide
-    attr_accessor :title, :content, :notes, :image_path, :slide_type
+    attr_accessor :title, :content, :notes, :image_path, :slide_type, :demo_code
 
-    def initialize(title: "", content: [], notes: "", image_path: nil, slide_type: :content)
+    def initialize(title: "", content: [], notes: "", image_path: nil, slide_type: :content, demo_code: nil)
       @title = title
       @content = content.is_a?(Array) ? content : [content].compact
       @notes = notes
       @image_path = image_path
-      @slide_type = slide_type # :content, :image, or :mixed
+      @slide_type = slide_type # :content, :image, :mixed, or :demo
+      @demo_code = demo_code.is_a?(Array) ? demo_code : (demo_code ? [demo_code] : nil)
     end
 
     def add_content(item)
@@ -31,6 +32,7 @@ module ISpeaker
         notes: @notes,
         image_path: @image_path,
         slide_type: @slide_type,
+        demo_code: @demo_code
       }
     end
 
@@ -57,6 +59,8 @@ module ISpeaker
         !@title.strip.empty? && !@image_path.nil? && File.exist?(@image_path.to_s)
       when "mixed"
         !@title.strip.empty? && (!@content.empty? || (!@image_path.nil? && File.exist?(@image_path.to_s)))
+      when "demo"
+        !@title.strip.empty? && !@content.empty? && has_demo_code?
       else
         !@title.strip.empty? && !@content.empty?
       end
@@ -68,6 +72,14 @@ module ISpeaker
 
     def has_valid_image?
       !@image_path.nil? && File.exist?(@image_path.to_s)
+    end
+
+    def demo_slide?
+      @slide_type == :demo || @slide_type == "demo"
+    end
+
+    def has_demo_code?
+      !@demo_code.nil? && !@demo_code.empty?
     end
 
     def set_image(path)

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require "net/http"
+require "async"
+require "async/http"
 require "json"
 require "uri"
 
@@ -13,14 +14,22 @@ module ISpeaker
     end
 
     def available?
-      uri = URI("#{@base_url}/api/tags")
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.read_timeout = 5
-      http.open_timeout = 5
+      # Keep sync version for backwards compatibility
+      Async do
+        available_async
+      end.wait
+    rescue StandardError
+      false
+    end
 
-      request = Net::HTTP::Get.new(uri)
-      response = http.request(request)
-      response.code == "200"
+    def available_async
+      Async do
+        endpoint = Async::HTTP::Endpoint.parse("#{@base_url}/api/tags")
+        Async::HTTP::Client.open(endpoint) do |client|
+          response = client.get("/api/tags", {}, {})
+          response.status == 200
+        end
+      end
     rescue StandardError
       false
     end
