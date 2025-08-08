@@ -81,8 +81,7 @@
     },
     {
       "title": "Are we getting rid of the magic comments?!",
-      "content": [
-      ],
+      "content": [],
       "image_path": "/Users/sampokuokkanen/i_speaker/Screenshot-frozen-by-default-2025-08-01.png",
       "comment": "Really got my hopes up! Not only performance but beauty",
       "slide_type": "mixed"
@@ -394,6 +393,24 @@
       "slide_type": "content"
     },
     {
+      "title": "Community Sentiment: The Long Wait ⏰",
+      "content": [
+        "After 11+ years of discussion about frozen strings...",
+        "",
+        "💬 **Samuel Williams' iconic comment:**",
+        "",
+        "# \"As long as we get it while we are alive\\!\"",
+        "",
+        "😅 The Ruby community's patience is legendary",
+        "• Children born when discussions started are now teenagers",
+        "",
+        "⏳ Estimated arrival: Ruby 4.1+..."
+      ],
+      "notes": "Samuel Williams' humorous comment perfectly captures the community sentiment. We've been waiting so long for default frozen strings that it's become a running joke. Yet this patience is also what makes Ruby stable and reliable.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
       "title": "The Famous Ruby Timeline",
       "content": [
         "Why so slow? Ruby values backward compatibility over speed",
@@ -521,6 +538,31 @@
         "Question: How does your team balance innovation vs. stability?"
       ],
       "notes": "Connect Ruby's development philosophy to Taiwan's tech culture. Both prioritize long-term stability and careful decision-making.",
+      "image_path": null,
+      "slide_type": "content"
+    },
+    {
+      "title": "The Other Side: mame's Defense of Mutability 🎭",
+      "content": [
+        "**Yusuke Endoh (mame) on why Ruby should stay dynamic:**",
+        "",
+        "\"I'm against making Ruby immutable by default. One of the most important properties of Ruby is **dynamics**.\"",
+        "",
+        "**Ruby's superpowers that immutability threatens:**",
+        "• Dynamically (re)defining classes and methods at runtime",
+        "• Monkey-patching for DRY and flexibility",
+        "• Manipulating variables through Binding",
+        "• Breaking encapsulation when needed",
+        "",
+        "**The performance question:**",
+        "\"If it becomes 10x faster, worth considering.",
+        "If it becomes 10% faster, **it does not pay**.\"",
+        "",
+        "💭 TruffleRuby proves we can have both speed AND flexibility",
+        "",
+        "Source: Ruby Issue #16153"
+      ],
+      "notes": "mame's perspective is crucial - he reminds us that Ruby's dynamic nature is its soul. The flexibility to change anything at runtime is what makes Ruby special. This tension between performance and dynamism is at the heart of the frozen string debate. His 10x vs 10% rule is a good benchmark for evaluating trade-offs.",
       "image_path": null,
       "slide_type": "content"
     },
@@ -719,7 +761,6 @@
         "This presentation was created with i_speaker:",
         "• AI-powered Ruby gem for creating presentations",
         "• Interactive console interface with dual AI support",
-        "• Multiple export formats (Markdown, Slidev, JSON)",
         "",
         "🔗 **Source code and gem available at:**"
       ],
@@ -744,8 +785,36 @@
       "notes": "End with gratitude to the local community and provide proper sources for follow-up.",
       "image_path": null,
       "slide_type": "content"
+    },
+    {
+      "title": "Bonus: How This Presentation Was Made\\! 🛠️",
+      "content": [
+        "**i_speaker: AI-Powered Presentation Tool**",
+        "",
+        "🏗️ **Technical Stack:**",
+        "• Pure Ruby gem with TTY::Prompt for interactive CLI",
+        "• Dual AI: Ollama (local) + RubyLLM (cloud fallback)",
+        "• JSON-based slide storage with auto-save protection",
+        "",
+        "✨ **Key Features:**",
+        "• dRuby powered notes server",
+        "• AI generates entire talks from a single topic",
+        "• Context-aware slide suggestions based on flow",
+        "• Live demos with executable Ruby code blocks",
+        "• Smart file browser with talk preview",
+        "",
+        "🎯 **This talk: 58 slides, generated & refined with AI assistance**",
+        "",
+        "```ruby",
+        "gem install i_speaker",
+        "i_speaker  # Start creating\\!",
+        "```"
+      ],
+      "notes": "If we have extra time, here's how this presentation was created\\! i_speaker is our Ruby gem that combines AI with traditional presentation tools. It's open source and demonstrates Ruby's strengths in building developer tools.",
+      "image_path": null,
+      "slide_type": "content"
     }
   ],
   "estimated_duration": 127,
-  "completion_status": "58/58 slides completed"
+  "completion_status": "52/52 slides completed"
 }
